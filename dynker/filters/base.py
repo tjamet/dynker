@@ -3,6 +3,8 @@ import itertools
 
 class Filter(object) :
   Prio = 0
+  # TODO: set it to False and reset it to True for subclasses when not provided
+  AutoFilter=True
 
   def _getObjPrio(self,obj) :
     if isinstance(obj,(int,long, float)) :
@@ -27,12 +29,20 @@ class Filter(object) :
   def __iter__(self) :
     return self.iterFilters(withTemplates=False, sort=True)
 
+  def setPrio(self,prio) :
+    self.prio = prio
+
   def withFilter(self,filter) :
     self.filters.append(filter)
     return self
 
   def filter(*args,**kwds) :
     raise NotImplementedError("Cannot run a filter on the base filter please use Implementation instead")
+
+  def withAllFilters(self, **kwds) :
+    for c in self.__class__.__subclasses__() :
+        if c.AutoFilter :
+            self.withFilter(c(**kwds))
 
 class ChainFilter(Filter) :
     Prio = float("-inf")
