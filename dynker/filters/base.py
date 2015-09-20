@@ -40,9 +40,12 @@ class Filter(object) :
     raise NotImplementedError("Cannot run a filter on the base filter please use Implementation instead")
 
   def withAllFilters(self, **kwds) :
-    for c in self.__class__.__subclasses__() :
-        if c.AutoFilter :
-            self.withFilter(c(**kwds))
+    def addFilters(cls) :
+        for c in cls.__subclasses__() :
+            if c.AutoFilter :
+                self.withFilter(c(**kwds))
+            addFilters(c)
+    addFilters(self.__class__)
 
 class ChainFilter(Filter) :
     Prio = float("-inf")
