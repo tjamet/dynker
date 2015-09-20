@@ -15,6 +15,13 @@ class LineFilter(Filter):
       return tpe("\n").join(it)
     return it
 
+class FileFilter(Filter) :
+    def __init__(self, *args,**kwds) :
+        self.args = args
+        self.kwds = kwds
+    def filter(self, path) :
+        return file(path, *self.args, **self.kwds)
+
 class PatternMatch(object) :
   def __init__(self,pattern=None, patternRe=None, prio=0):
     self.prio = prio
