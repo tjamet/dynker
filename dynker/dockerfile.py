@@ -1,4 +1,5 @@
 from filters import *
+from tools import GitMTime
 import logging
 
 class Dockerfile(object) :
@@ -19,6 +20,10 @@ class Dockerfile(object) :
     def addFilter(self,*filters) :
         for filter in filters :
             self.filter.withFilter(filter)
+    @property
+    def mtime(self) :
+        git = GitMTime.Get()
+        return max(map(git.getMTime,self.paths))
 
 if __name__ == "__main__" :
     import sys
