@@ -1,4 +1,5 @@
-__all__ = ["Filter"]
+__all__ = ["Filter", "ChainFilter"]
+import itertools
 
 class Filter(object) :
   Prio = 0
@@ -33,3 +34,9 @@ class Filter(object) :
   def filter(*args,**kwds) :
     raise NotImplementedError("Cannot run a filter on the base filter please use Implementation instead")
 
+class ChainFilter(Filter) :
+    Prio = float("-inf")
+    def __init__(self,*iterables) :
+        self.iterables = iterables
+    def filter(self, it) :
+        return itertools.chain(it, *self.iterables)
