@@ -16,20 +16,20 @@ class DockerfileOptLayers(PatternMatch, LineFilter) :
         sep = "RUN "
         for line in it :
             match = self.patternRe.match(line)
-            logging.debug("Filtering line %r, pattern matched: %r", line, match is not None)
+            self.logger.debug("Filtering line %r, pattern matched: %r", line, match is not None)
             if match :
                 curLine+= sep+match.group(1)
                 sep = " && "
             else :
                 if curLine :
-                    logging.debug("Producing output line %r", curLine)
+                    self.logger.debug("Producing output line %r", curLine)
                     yield curLine
                 curLine = ""
                 sep = "RUN "
-                logging.debug("Producing output line %r", line)
+                self.logger.debug("Producing output line %r", line)
                 yield line
         if curLine :
-            logging.debug("Producing output line %r", curLine)
+            self.logger.debug("Producing output line %r", curLine)
             yield curLine
                     
 class DockerfileOptYum(PatternMatch, LineFilter) :
@@ -42,10 +42,10 @@ class DockerfileOptYum(PatternMatch, LineFilter) :
     def filter(self, it) :
         for line in it :
             match = self.patternRe.match(line)
-            logging.debug("Filtering line %r, pattern matched: %r", line, match is not None)
+            self.logger.debug("Filtering line %r, pattern matched: %r", line, match is not None)
             if match :
                 line = "RUN touch /var/lib/rpm/* && %s && yum clean all"%match.group(1)
-            logging.debug("Producing output line %r", line)
+            self.logger.debug("Producing output line %r", line)
             yield line
                     
 class DockerfileOptApt(PatternMatch, LineFilter) :
@@ -58,64 +58,66 @@ class DockerfileOptApt(PatternMatch, LineFilter) :
     def filter(self, it) :
         for line in it :
             match = self.patternRe.match(line)
-            logging.debug("Filtering line %r, pattern matched: %r", line, match is not None)
+            self.logger.debug("Filtering line %r, pattern matched: %r", line, match is not None)
             if match :
                 line = "RUN apt-get update && %s && apt-get clean"%match.group(1)
-            logging.debug("Producing output line %r", line)
+            self.logger.debug("Producing output line %r", line)
             yield line
 
 class DockerfileFromFilter(PatternMatch, LineFilter) :
     Prio = 20
 
-    def __init__(self, newTag=None, keepFirst=False, prio=None) :
+    def __init__(self, keepFirst=False, prio=None, tagResolver=None) :
         super(DockerfileFromFilter,self).__init__("^(FROM[\s]*([^:]*))(:(.*)|)$")
         if prio :
             self.prio = prio
-        self.newTag = newTag
         self.keepFirst = keepFirst
+        self.tagResolver = tagResolver
+
+    def getImageTag(self, image, tag) :
+        if self.tagResolver :
+            newTag = self.tagResolver.imageTag(image)
+        else :
+            newTag = None
+        if newTag :
+            return (image, newTag)
+        else:
+            return (image, tag)
 
     def getLine(self, match, line) :
         if match :
-            if self.newTag :
-                line = "%s:%s"%(match.group(1), self.newTag)
-            else:
-                line = "%s%s"%(match.group(1), match.group(3),)
+            if not self.dumpFROM :
+                return None
+            image, tag = self.getImageTag(match.group(1), match.group(4))
+            line = "%s%s"%(image, ":%s"%tag if tag else "")
+            self.logger.debug("line: %s, keep first : %r", line, self.keepFirst)
+            if self.keepFirst :
+                self.dumpFROM = False
         return line
 
     def filter(self, it) :
-        dumpFROM = True
+        self.dumpFROM = True
         for line in it :
             match = self.patternRe.match(line)
-            logging.debug("Filtering line %r, pattern matched: %r", line, match is not None)
-            if dumpFROM :
-                line = self.getLine(match, line)
-            else :
-                line = None
+            self.logger.debug("Filtering line %r, pattern matched: %r", line, match is not None)
+            line = self.getLine(match, line)
             if line :
-                logging.debug("Producing output line %r", line)
+                self.logger.debug("Producing output line %r", line)
                 yield line
             else :
-                logging.debug("No line to be produced")
+                self.logger.debug("No line to be produced")
 
 class DockerfileDepExtractorFilter(DockerfileFromFilter) :
     def __init__(self, prio=float("-inf"), **kwds) :
         return super(DockerfileDepExtractorFilter, self).__init__(prio=prio, **kwds)
     def getLine(self, match, line) :
         if match :
-            image = match.group(2)
-            image = image.strip()
-            if self.newTag :
-                tag = self.newTag
-            else :
-                tag = match.group(4)
-                if isinstance(tag,(str,unicode)) :
-                    tag = tag.strip()
-            return image, tag
+            return self.getImageTag(match.group(1), match.group(4))
         return None
 
 class DockerfileFilter(LineFilter, Filter) :
     #simply declare the root class
-    def __init__(self, optimizeLayers=False, keepFirstFrom=False, newTag=None, **args) :
+    def __init__(self, optimizeLayers=False, keepFirstFrom=False, tagResolver=None, **args) :
         super(DockerfileFilter, self).__init__()
         self.withFilter(StripLinesFilter())
         self.withFilter(NotMatchingLineFilter("^(#.*|[\s]*)$", prio = 9))
@@ -124,9 +126,9 @@ class DockerfileFilter(LineFilter, Filter) :
             self.withFilter(DockerfileOptLayers())
         self.withFilter(DockerfileOptApt())
         self.withFilter(DockerfileOptYum())
-        self.withFilter(DockerfileFromFilter(newTag, keepFirst=keepFirstFrom))
+        self.withFilter(DockerfileFromFilter(tagResolver=tagResolver, keepFirst=keepFirstFrom))
         # add all userdefined filters
-        self.withAllFilters(optimizeLayers=optimizeLayers, keepFirstFrom=keepFirstFrom, newTag=newTag, **args)
+        self.withAllFilters(optimizeLayers=optimizeLayers, keepFirstFrom=keepFirstFrom, tagResolver=tagResolver, **args)
 
 class DockerfileDepExtractor(DockerfileFilter) :
     AutoFilter=False

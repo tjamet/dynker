@@ -1,5 +1,6 @@
 __all__ = ["Filter", "ChainFilter"]
 import itertools
+import logging
 
 class Filter(object) :
   Prio = 0
@@ -25,6 +26,7 @@ class Filter(object) :
 
   def __init__(self) :
     self.filters = []
+    self.logger = logging.getLogger(self.__class__.__name__)
 
   def __iter__(self) :
     return self.iterFilters(withTemplates=False, sort=True)

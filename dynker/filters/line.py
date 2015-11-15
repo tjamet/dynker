@@ -1,3 +1,4 @@
+import logging
 import re
 from .base import Filter
 import itertools
@@ -19,6 +20,7 @@ class FileFilter(Filter) :
     def __init__(self, *args,**kwds) :
         self.args = args
         self.kwds = kwds
+        self.logger = logging.getLogger(self.__class__.__name__)
     def filter(self, path) :
         return file(path, *self.args, **self.kwds)
 
@@ -27,6 +29,7 @@ class PatternMatch(object) :
     self.prio = prio
     self.pattern = pattern
     self.patternRe = patternRe if patternRe else re.compile(pattern)
+    self.logger = logging.getLogger(self.__class__.__name__)
 
 class MatchingLineFilter(PatternMatch, LineFilter) :
 
@@ -52,5 +55,6 @@ class ReplaceLineReFilter(PatternMatch, LineFilter) :
 class StripLinesFilter(LineFilter) :
     def __init__(self,prio=0) :
         self.prio = prio
+        self.logger = logging.getLogger(self.__class__.__name__)
     def filter(self, it) :
         return itertools.imap(lambda x : x.strip(), it)
