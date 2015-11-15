@@ -8,11 +8,13 @@ class GitMTime(object) :
         self.hist = self.repo.iter_commits()
         self.MTimes = {}
         self.logger = logging.getLogger(self.__class__.__name__)
-    def isDirty(self, file) :
-        for diff in git.Repo().head.commit.diff(None) :
-            if diff.b_path == file or diff.a_path == file :
-                logging.debug("%s is dirty",file)
-                return True
+    def isDirty(self, *files) :
+        for file in files :
+            file = os.path.normpath(file)
+            for diff in git.Repo().head.commit.diff(None) :
+                if diff.b_path == file or diff.a_path == file :
+                    logging.debug("%s is dirty",file)
+                    return True
         self.logger.debug("%r are clean",files)
         return False
 
