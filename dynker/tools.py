@@ -2,7 +2,7 @@ import os
 import git
 import logging
 
-class GitMTime(object) :
+class GitHistory(object) :
     def __init__(self) :
         self.repo = git.Repo()
         self.hist = self.repo.iter_commits()

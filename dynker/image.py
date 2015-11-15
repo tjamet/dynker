@@ -1,7 +1,8 @@
+import sys
 import os
 import glob
 from filters import Filter
-from tools import GitMTime
+from tools import GitHistory
 import logging
 import docker
 import yaml
@@ -89,7 +90,7 @@ class ImageBuilder(object) :
                 #TODO: restore git mtime
                 if tarinfo.isreg():
                     f = open(name, "rb")
-                    tarinfo.mtime = GitMTime.Get().getMTime(name)
+                    tarinfo.mtime = GitHistory.Get().getMTime(name)
                     self.logger.debug("Added file %s=>%s (mtime=%f) to context", name, tarinfo.name, tarinfo.mtime)
                     tar.addfile(tarinfo, f)
                     f.close()

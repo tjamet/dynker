@@ -1,5 +1,6 @@
+import sys
 from filters import *
-from tools import GitMTime
+from tools import GitHistory
 import logging
 
 class Dockerfile(object) :
@@ -22,7 +23,7 @@ class Dockerfile(object) :
             self.filter.withFilter(filter)
     @property
     def mtime(self) :
-        git = GitMTime.Get()
+        git = GitHistory.Get()
         return max(map(git.getMTime,self.paths))
 
 if __name__ == "__main__" :
