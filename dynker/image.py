@@ -7,6 +7,7 @@ import logging
 import docker
 import yaml
 import tarfile
+import json
 from cStringIO import StringIO
 import tempfile
 
@@ -131,3 +132,38 @@ class ImageBuilder(object) :
         if self.dockerfile :
             return self.dockerfile.imageDeps()
         return []
+
+    def buildTag(self, followSymLinks=False, restoreMTime=False) :
+        deps = self.deps(followSymLinks=followSymLinks, restoreMTime=restoreMTime)
+        self.logger.debug("Resolved dependencies %r for %s"%(deps,self.name))
+        tag = GitHistory.Get().getLastCommit(*deps, strict=False)
+        if tag is None :
+            tag = 'latest'
+        elif GitHistory.Get().isDirty(*deps) :
+            tag+= "-dirty"
+        self.logger.debug("Resolved build tag: %s"%tag)
+        return tag
+    def build(self, client, followSymLinks=False, restoreMTime=False, **kwds) :
+        context = self.getContext(followSymLinks=followSymLinks, restoreMTime=restoreMTime)
+        tag = self.buildTag()
+        if tag is None :
+            tag = 'latest'
+        imageName = "%s:%s"%(self.name, tag)
+        self.listenStream(client.build(fileobj=context, custom_context=True, tag=imageName, encoding='gzip'))
+    def listenStream(self,stream) :
+        for l in  stream:
+            try :
+                l = json.loads(l)
+                if "status" in l :
+                    print l["status"]
+                else :
+                    print l["stream"],
+            except KeyError:
+                try:
+                    raise ValueError(l["errorDetail"]["message"])
+                except KeyError:
+                    raise RuntimeError("failed to get error message in line %r"%l)
+            except UnicodeEncodeError:
+                self.logger.error("Failed to decode stream %s",l)
+            except ValueError:
+                print l,
