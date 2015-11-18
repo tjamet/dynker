@@ -38,24 +38,30 @@ class Dockerfile(object) :
         git = GitHistory.Get()
         return max(map(git.getMTime,self.paths))
 
-if __name__ == "__main__" :
-    import sys
-    from optparse import OptionParser
-    parser = OptionParser()
-    parser.add_option("-t", "--tag", dest="tag", default=None,
-                      help="Rewrites FROM directives with TAG", metavar="TAG")
+def addDockerfileOptions(parser) :
     parser.add_option("-s", "--single", dest="single", action="store_true",
                       help="Filters the Dockerfile FROM directives so that they are concatenated to produce a single image")
     parser.add_option("-o", "--optimize", dest="optimize", action="store_true",
                       help="Conatenate consecutive RUN directives to reduce layer number")
-    parser.add_option("-v","--verbose",
-                      dest="verbose", action="store_true",
-                      help="switches the debug mode")
-    (options, args) = parser.parse_args()
-    if options.verbose :
-        logging.basicConfig(level=logging.DEBUG)
-    else :
-        logging.basicConfig(level=logging.INFO)
-    dockerfile = Dockerfile(args, newTag = options.tag, single=options.single, optimizeLayers=options.optimize)
-    print dockerfile
 
+def main(argv=sys.argv) :
+    from optparse import OptionParser
+    from . import addCommonOptions, commonSetUp
+    parser = OptionParser()
+    parser.add_option("-f", "--file", dest="files", default=[], action="append",
+                      help="Path to the Dockerfile to use. If the path is a relative path then it must be relative to the current directory. The file must be within the build context. The default is Dockerfile.", metavar="FILE")
+    parser.add_option("-t", "--tag", dest="tag", default=None,
+                      help="Rewrites FROM directives with TAG", metavar="TAG")
+    addCommonOptions(parser)
+    addDockerfileOptions(parser)
+    (options, args) = parser.parse_args(argv[1:])
+    commonSetUp(options)
+    if not options.files and not args :
+        options.files = ["Dockerfile"]
+    dockerfile = Dockerfile(options.files + args, single=options.single, optimizeLayers=options.optimize, newTag=options.tag)
+    dockerfile.tag = options.tag
+    print dockerfile
+    print dockerfile.deps()
+
+if __name__ == "__main__" :
+    main()
