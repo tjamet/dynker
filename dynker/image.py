@@ -114,3 +114,20 @@ class ImageBuilder(object) :
             dockerfile.close()
         tar.close()
         return gzip.getvalue()
+
+    def deps(self, followSymLinks=False, restoreMTime=False) :
+        fileListFilter = FileMapFilter()
+        self.logger.debug("getting image build depencencies")
+        if restoreMTime :
+            fileListFilter.withFilter(ExpandDirectoryFilter())
+        if followSymLinks :
+            fileListFilter.withFilter(ResolveSymLink())
+        deps = []
+        if self.dockerfile :
+            deps+= self.dockerfile.deps()
+        deps+= map(lambda x:x[1], fileListFilter.filter(self.contextMap.iteritems()))
+        return deps
+    def imageDeps(self) :
+        if self.dockerfile :
+            return self.dockerfile.imageDeps()
+        return []
