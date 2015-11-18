@@ -5,6 +5,8 @@ import logging
 
 class Dockerfile(object) :
     def __init__(self, paths, single=False, optimizeLayers=False, tagResolver=None, newTag=None):
+        if isinstance(paths, (str,unicode)) :
+            paths = [paths]
         self.paths = paths
         self.tagResolver = tagResolver if tagResolver is not None else self
         self.single = single
