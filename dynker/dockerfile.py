@@ -4,17 +4,20 @@ from tools import GitHistory
 import logging
 
 class Dockerfile(object) :
-    def __init__(self, paths, newTag=None, single=False, optimizeLayers=False):
+    def __init__(self, paths, single=False, optimizeLayers=False, tagResolver=None, newTag=None):
         self.paths = paths
+        self.tagResolver = tagResolver if tagResolver is not None else self
         self.single = single
         self.optimizeLayers = optimizeLayers
         self.newTag = newTag
     @property
     def filter(self) :
-        return DockerfileFilter(optimizeLayers=self.optimizeLayers, keepFirstFrom=self.single)
+        return DockerfileFilter(optimizeLayers=self.optimizeLayers, keepFirstFrom=self.single, tagResolver=self.tagResolver)
     @property
     def depsFilter(self) :
-        return DockerfileDepExtractor(optimizeLayers=self.optimizeLayers, keepFirstFrom=self.single)
+        return DockerfileDepExtractor(optimizeLayers=self.optimizeLayers, keepFirstFrom=self.single, tagResolver=self.tagResolver)
+    def imageTag(self, imgName) :
+        return self.newTag
     def lines(self) :
         for path in self.paths :
             for line in file(path) :
