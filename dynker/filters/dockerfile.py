@@ -88,8 +88,8 @@ class DockerfileFromFilter(PatternMatch, LineFilter) :
         if match :
             if not self.dumpFROM :
                 return None
-            image, tag = self.getImageTag(match.group(1), match.group(4))
-            line = "%s%s"%(image, ":%s"%tag if tag else "")
+            image, tag = self.getImageTag(match.group(2), match.group(4))
+            line = "FROM %s%s"%(image, ":%s"%tag if tag else "")
             self.logger.debug("line: %s, keep first : %r", line, self.keepFirst)
             if self.keepFirst :
                 self.dumpFROM = False
@@ -112,7 +112,8 @@ class DockerfileDepExtractorFilter(DockerfileFromFilter) :
         return super(DockerfileDepExtractorFilter, self).__init__(prio=prio, **kwds)
     def getLine(self, match, line) :
         if match :
-            return self.getImageTag(match.group(1), match.group(4))
+            image, tag = self.getImageTag(match.group(2), match.group(4))
+            return image
         return None
 
 class DockerfileFilter(LineFilter, Filter) :
