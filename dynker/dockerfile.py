@@ -6,8 +6,15 @@ import logging
 class Dockerfile(object) :
     def __init__(self, paths, newTag=None, single=False, optimizeLayers=False):
         self.paths = paths
-        self.filter = DockerfileFilter(optimizeLayers=optimizeLayers, keepFirstFrom=single, newTag=newTag)
-        self.depsFilter = DockerfileDepExtractor(optimizeLayers=optimizeLayers, keepFirstFrom=single, newTag=newTag)
+        self.single = single
+        self.optimizeLayers = optimizeLayers
+        self.newTag = newTag
+    @property
+    def filter(self) :
+        return DockerfileFilter(optimizeLayers=self.optimizeLayers, keepFirstFrom=self.single)
+    @property
+    def depsFilter(self) :
+        return DockerfileDepExtractor(optimizeLayers=self.optimizeLayers, keepFirstFrom=self.single)
     def lines(self) :
         for path in self.paths :
             for line in file(path) :
