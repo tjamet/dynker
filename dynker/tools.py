@@ -9,6 +9,11 @@ class GitHistory(object) :
         self.MTimes = {}
         self.logger = logging.getLogger(self.__class__.__name__)
     def isDirty(self, *files) :
+        files = set(map(os.path.normpath,files))
+        untracked = files - set(map(lambda e:os.path.normpath(e.path), git.Repo().index.entries.itervalues()))
+        if  untracked :
+            self.logger.debug("%r are untracked ==> dirty state", untracked)
+            return True
         for file in files :
             file = os.path.normpath(file)
             for diff in git.Repo().head.commit.diff(None) :
