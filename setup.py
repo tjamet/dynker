@@ -21,7 +21,9 @@ requires = [
     "docker-py",
     "gitpython",
 ]
-tests_require = []
+tests_require = [
+    "coverage",
+]
 testing_extras = []
 
 from setuptools import setup, find_packages
