@@ -1,15 +1,18 @@
 import sys
 import os
 import glob
-from filters import Filter
-from tools import GitHistory
 import logging
 import docker
 import yaml
 import tarfile
 import json
-from cStringIO import StringIO
 import tempfile
+
+from copy import copy
+from cStringIO import StringIO
+from filters import Filter
+from tools import GitHistory
+from .dockerfile import Dockerfile
 
 class FileMapFilter(Filter) :
     def __init__(self, *args, **kwds) :
@@ -71,21 +74,35 @@ class ResolveSymLink(ExpandFileMapFilter) :
             yield dest, src
 
 class ImageBuilder(object) :
-    def __init__(self, name, dockerfile=None, contextMap={}) :
+    def __init__(self, name, dockerfile=None, contextMap={}, followSymLinks=False, expandDirectory=False, restoreMTime=False) :
+        if not dockerfile :
+            dockerfile = {
+                paths :['Dockerfile']
+            }
+        if dockerfile.get('paths', None) is None :
+            dockerfile = copy(dockerfile)
+            dockerfile['paths'] = 'Dockerfile'
         self.name = name
         self.dockerfile = dockerfile
         self.contextMap = contextMap
         self.logger = logging.getLogger(self.__class__.__name__)
-    def getContext(self, followSymLinks=False, restoreMTime=False):
+        self.followSymLinks = followSymLinks
+        self.expandDirectory = expandDirectory
+        self.restoreMTime = restoreMTime
+
+    def expandContextMap(self) :
         fileListFilter = FileMapFilter()
         self.logger.debug("getting content")
-        if restoreMTime :
+        if self.expandDirectory :
             fileListFilter.withFilter(ExpandDirectoryFilter())
-        if followSymLinks :
+        if self.followSymLinks :
             fileListFilter.withFilter(ResolveSymLink())
+        return dict(fileListFilter.filter(self.contextMap.iteritems()))
+
+    def getContext(self):
         gzip = StringIO()
         tar = tarfile.open(fileobj=gzip,mode="w|gz")
-        if restoreMTime:
+        if self.restoreMTime:
             def add(name, arcname, recursive=True) :
                 tarinfo = tar.gettarinfo(name, arcname)
                 #TODO: restore git mtime
@@ -105,36 +122,42 @@ class ImageBuilder(object) :
         else :
             def add(src, dest) :
                 tar.add(src, dest)
-        for dest, src in fileListFilter.filter(self.contextMap.iteritems()) :
+        mapping = self.expandContextMap()
+        for dest, src in mapping.iteritems() :
             add(src, dest)
-        if self.dockerfile :
-            dockerfile = tempfile.TemporaryFile()
-            dockerfile.write(str(self.dockerfile))
-            dockerfile.seek(0)
-            tar.addfile(tar.gettarinfo(arcname="Dockerfile", fileobj=dockerfile), fileobj=dockerfile)
-            dockerfile.close()
+        dockerfile = tempfile.TemporaryFile()
+        dockerfile.write(str(self.getDockerfile(mapping)))
+        dockerfile.seek(0)
+        tar.addfile(tar.gettarinfo(arcname="Dockerfile", fileobj=dockerfile), fileobj=dockerfile)
+        dockerfile.close()
         tar.close()
         return gzip.getvalue()
 
-    def deps(self, followSymLinks=False, restoreMTime=False) :
-        fileListFilter = FileMapFilter()
-        self.logger.debug("getting image build depencencies")
-        if restoreMTime :
-            fileListFilter.withFilter(ExpandDirectoryFilter())
-        if followSymLinks :
-            fileListFilter.withFilter(ResolveSymLink())
-        deps = []
-        if self.dockerfile :
-            deps+= self.dockerfile.deps()
-        deps+= map(lambda x:x[1], fileListFilter.filter(self.contextMap.iteritems()))
-        return deps
-    def imageDeps(self) :
-        if self.dockerfile :
-            return self.dockerfile.imageDeps()
-        return []
+    def getDockerfile(self, mapping=None) :
+        dockerfileMap = {}
+        if mapping is None :
+            mapping = self.expandContextMap()
 
-    def buildTag(self, followSymLinks=False, restoreMTime=False) :
-        deps = self.deps(followSymLinks=followSymLinks, restoreMTime=restoreMTime)
+        dockerfiles = map(lambda x:os.path.normpath(os.path.join('/', x)), self.dockerfile['paths'])
+        for dest, src in mapping.iteritems() :
+            dest = os.path.normpath(os.path.join('/', dest))
+            if dest in dockerfiles :
+                dockerfileMap[dest] = src
+        dockerfileArgs = copy(self.dockerfile)
+        try :
+            dockerfileArgs['paths'] = map(lambda x : dockerfileMap[x], dockerfiles)
+        except KeyError :
+            raise ValueError("Failed to find Dockerfile(s) %r in image context %r %r"%(dockerfiles, mapping, dockerfileMap))
+        return Dockerfile(**dockerfileArgs)
+
+    def deps(self) :
+        return self.expandContextMap().values()
+
+    def imageDeps(self) :
+        return self.getDockerfile().imageDeps()
+
+    def buildTag(self) :
+        deps = self.deps()
         self.logger.debug("Resolved dependencies %r for %s"%(deps,self.name))
         tag = GitHistory.Get().getLastCommit(*deps, strict=False)
         if tag is None :
@@ -143,8 +166,8 @@ class ImageBuilder(object) :
             tag+= "-dirty"
         self.logger.debug("Resolved build tag: %s"%tag)
         return tag
-    def build(self, client, followSymLinks=False, restoreMTime=False, **kwds) :
-        context = self.getContext(followSymLinks=followSymLinks, restoreMTime=restoreMTime)
+    def build(self, client, **kwds) :
+        context = self.getContext()
         tag = self.buildTag()
         if tag is None :
             tag = 'latest'

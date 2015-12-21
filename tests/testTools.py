@@ -79,6 +79,7 @@ class TestGitHistory(unittest.TestCase) :
     @classmethod
     def tearDownClass(cls) :
         os.chdir(cls.origWD)
+        del GitHistory.Git
 
     def testGetter(self) :
         git = GitHistory.Get()

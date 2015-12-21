@@ -1,4 +1,8 @@
 import sys
+import os
+import itertools
+import glob
+
 from .dockerfile import Dockerfile
 from .image import ImageBuilder
 
@@ -12,19 +16,18 @@ class Builder(object) :
             contextMap = desc.pop('context',{'/':'.'})
             dockerfile = desc.pop('dockerfile','Dockerfile')
             imgName = desc.pop("imageName", imgName)
-            if not isinstance(dockerfile,dict) :
-                dockerfile = {
-                    'paths' : [dockerfile],
-                }
+            if isinstance(dockerfile, (str, unicode)) :
+                dockerfile = [dockerfile]
+            if not isinstance(dockerfile, dict) :
+                dockerfile = {'paths' : dockerfile}
             dockerfile['tagResolver'] = self
-            dockerfile = Dockerfile(**dockerfile)
-            self.images[imgName] = ImageBuilder(imgName, dockerfile=dockerfile, contextMap=contextMap)
+            self.images[imgName] = ImageBuilder(imgName, dockerfile=dockerfile, contextMap=contextMap, **desc)
     def imageTag(self, imgName) :
         imgBuilder = self.images.get(imgName, None)
         if imgBuilder :
             return imgBuilder.buildTag()
         return None
-    def build(self, client, followSymLinks=False, restoreMTime=False, names=None) :
+    def build(self, client, names=None) :
         # we don't expect to have large number of image sto build for now,
         # thus, we can handle a simple lookup table
         if names is None :
@@ -47,7 +50,7 @@ class Builder(object) :
         while toBuild :
             for img in toBuild :
                 builder = self.images[img]
-                builder.build(client, followSymLinks, restoreMTime)
+                builder.build(client)
             toBuild=getAllDepOn(*toBuild)
 
 def main(argv=sys.argv) :
@@ -71,7 +74,6 @@ def main(argv=sys.argv) :
     images = yaml.load(file(options.file))
     builder = Builder(**images)
     builder.build(Client(base_url=os.environ.get("DOCKER_HOST", None)))
-
 
 if __name__ == "__main__" :
     main()

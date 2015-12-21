@@ -1,8 +1,4 @@
 ---
-image1:
-    imageName: image1
-    context:
-      /: image1
 image2:
     imageName: image2
     context:
@@ -11,6 +7,10 @@ image3:
     imageName: image3
     context:
       /: image3
+image1:
+    imageName: image1
+    context:
+      /: image1
 image4:
     imageName: image4
     context:
