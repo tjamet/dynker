@@ -62,6 +62,17 @@ CLASSIFIERS = [
     "Programming Language :: Python :: 3.4",
 ]
 
+
+class ChangeDir(object) : 
+    def __init__(self, wd) : 
+        self.wd = wd
+    def __enter__(self):
+        self._pwd = os.getcwd()
+        if self.wd :
+            os.chdir(self.wd)
+    def __exit__(self, *args, **kwds) : 
+        os.chdir(self._pwd)
+
 def getDirtyState() :
     import subprocess
     p = subprocess.Popen(['git', 'status', '-s', '--untracked-files=no'], stderr=subprocess.PIPE, stdout=subprocess.PIPE)
@@ -73,20 +84,35 @@ def getDirtyState() :
     else :
         return ""
 
+
 def getVersion() :
-    import subprocess
-    p = subprocess.Popen(['git', 'describe'], stderr=subprocess.PIPE, stdout=subprocess.PIPE)
-    stdout, stderr = p.communicate()
-    if p.returncode == 0 :
-        version = stdout.strip()+getDirtyState()
-        if version[0] == 'v' :
-            version = version[1:]
+    with ChangeDir(os.path.dirname(__file__)) :
+        version = None
+        if os.path.exists('.git') :
+            import subprocess
+            p = subprocess.Popen(['git', 'describe'], stderr=subprocess.PIPE, stdout=subprocess.PIPE)
+            stdout, stderr = p.communicate()
+            if p.returncode == 0 :
+                version = stdout.strip()
+                if version[0] == 'v' :
+                    version = version[1:]
+                import re
+                match = re.match("([^-]*)(?:-([^-])-([^-]*)|)", version)
+                if match :
+                    version, changes, commit = match.groups()
+                    if changes :
+                        version = "%s.dev%s"%(version, changes)
+                    version += getDirtyState()
+        elif os.path.exists("PKG-INFO") :
+            import re
+            versionRe = re.compile("Version:[\s]*([^\s]*).*")
+            for line in file("PKG-INFO") :
+                match = versionRe.match(line)
+                if match :
+                    version = match.group(1)
+        if not version :
+            version = "0.0.0"
         return version
-    p = subprocess.Popen(['git', 'rev-parse', 'HEAD'], stderr=subprocess.PIPE, stdout=subprocess.PIPE)
-    stdout, stderr = p.communicate()
-    if p.returncode != 0 :
-        raise RuntimeError('Failed to retrieve version number, stdout:\n%s\nstderr:\n%s'%(stdout, stderr))
-    return 'dev-%s%s'%(stdout.strip(),getDirtyState())
 
 dist = setup(
     name='dyynker',
