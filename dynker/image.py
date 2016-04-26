@@ -3,6 +3,7 @@ import os
 import glob
 import logging
 import docker
+import hashlib
 import yaml
 import tarfile
 import json
@@ -74,7 +75,7 @@ class ResolveSymLink(ExpandFileMapFilter) :
             yield dest, src
 
 class ImageBuilder(object) :
-    def __init__(self, name, dockerfile=None, contextMap={}, followSymLinks=False, expandDirectory=False, restoreMTime=False) :
+    def __init__(self, name, dockerfile=None, contextMap={}, followSymLinks=False, expandDirectory=False) :
         if not dockerfile :
             dockerfile = {
                 paths :['Dockerfile']
@@ -88,7 +89,6 @@ class ImageBuilder(object) :
         self.logger = logging.getLogger(self.__class__.__name__)
         self.followSymLinks = followSymLinks
         self.expandDirectory = expandDirectory
-        self.restoreMTime = restoreMTime
 
     def expandContextMap(self) :
         fileListFilter = FileMapFilter()
@@ -102,29 +102,9 @@ class ImageBuilder(object) :
     def getContext(self):
         gzip = StringIO()
         tar = tarfile.open(fileobj=gzip,mode="w|gz")
-        if self.restoreMTime:
-            def add(name, arcname, recursive=True) :
-                tarinfo = tar.gettarinfo(name, arcname)
-                #TODO: restore git mtime
-                if tarinfo.isreg():
-                    f = open(name, "rb")
-                    tarinfo.mtime = GitHistory.Get().getMTime(name)
-                    self.logger.debug("Added file %s=>%s (mtime=%f) to context", name, tarinfo.name, tarinfo.mtime)
-                    tar.addfile(tarinfo, f)
-                    f.close()
-                elif tarinfo.isdir():
-                    tar.addfile(tarinfo)
-                    if recursive:
-                        for f in os.listdir(name):
-                            add(os.path.join(name, f), os.path.join(arcname, f), recursive)
-                else:
-                    tar.addfile(tarinfo)
-        else :
-            def add(src, dest) :
-                tar.add(src, dest)
         mapping = self.expandContextMap()
         for dest, src in mapping.iteritems() :
-            add(src, dest)
+            tar.add(src, dest)
         dockerfile = tempfile.TemporaryFile()
         dockerfile.write(str(self.getDockerfile(mapping)))
         dockerfile.seek(0)
@@ -157,20 +137,16 @@ class ImageBuilder(object) :
         return self.getDockerfile().imageDeps()
 
     def buildTag(self) :
-        deps = self.deps()
-        self.logger.debug("Resolved dependencies %r for %s"%(deps,self.name))
-        tag = GitHistory.Get().getLastCommit(*deps, strict=False)
-        if tag is None :
-            tag = 'latest'
-        elif GitHistory.Get().isDirty(*deps) :
-            tag+= "-dirty"
-        self.logger.debug("Resolved build tag: %s"%tag)
-        return tag
+        h = hashlib.sha1()
+        h.update(str(self.getDockerfile()))
+        for destination, source in self.expandContextMap():
+            h.update(source)
+            h.update(os.stat(source).st_mode)
+            h.update(file(source).read())
+        return h.hexdigest()
     def build(self, client, **kwds) :
         context = self.getContext()
         tag = self.buildTag()
-        if tag is None :
-            tag = 'latest'
         imageName = "%s:%s"%(self.name, tag)
         self.listenStream(client.build(fileobj=context, custom_context=True, tag=imageName, encoding='gzip'))
     def listenStream(self,stream) :

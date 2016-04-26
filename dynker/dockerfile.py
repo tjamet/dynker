@@ -1,6 +1,5 @@
 import sys
 from filters import *
-from tools import GitHistory
 import logging
 
 class Dockerfile(object) :
@@ -33,10 +32,6 @@ class Dockerfile(object) :
     def addFilter(self,*filters) :
         for filter in filters :
             self.filter.withFilter(filter)
-    @property
-    def mtime(self) :
-        git = GitHistory.Get()
-        return max(map(git.getMTime,self.paths))
 
 def addDockerfileOptions(parser) :
     parser.add_option("-s", "--single", dest="single", action="store_true",
