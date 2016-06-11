@@ -8,6 +8,7 @@ import yaml
 import tarfile
 import json
 import tempfile
+import termcolor
 
 from copy import copy
 from cStringIO import StringIO
@@ -148,13 +149,14 @@ class ImageBuilder(object) :
         else:
             self.logger.info("image %s already exist, use it rather than rebuilding it", imageName)
     def listenStream(self,stream) :
+        head = termcolor.colored('[{name}]:', 'cyan').format(name=self.name)
         for l in  stream:
             try :
                 l = json.loads(l)
                 if "status" in l :
-                    print l["status"]
+                    line = '%s\n' % l["status"]
                 else :
-                    print l["stream"],
+                    line = l["stream"]
             except KeyError:
                 try:
                     raise ValueError(l["errorDetail"]["message"])
@@ -163,7 +165,8 @@ class ImageBuilder(object) :
             except UnicodeEncodeError:
                 self.logger.error("Failed to decode stream %s",l)
             except ValueError:
-                print l,
+                line = l
+            sys.stdout.write('{head} {line}'.format(head=head, line=line))
 
 def addImageOptions(parser) :
     parser.add_option("--force-rm", dest="single", action="store_true",

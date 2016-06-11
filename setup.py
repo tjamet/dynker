@@ -18,6 +18,7 @@ import sys
 
 requires = [
     "pyyaml",
+    "termcolor",
     "docker-py",
     "gitpython",
 ]
