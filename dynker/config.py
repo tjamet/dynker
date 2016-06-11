@@ -23,8 +23,8 @@ class Node(dict):
                     self[k] = v
             else:
                 for kind in (dict, (list, tuple)):
-                    if isinstance(oldv, kind):
-                        if not isinstance(v, kind):
+                    if isinstance(oldv, kind) or isinstance(v, kind):
+                        if not isinstance(oldv, kind) or not isinstance(v, kind):
                             raise ValueError("Can't update uncoherent values for key %s, old value: %r, new value: %r" % (k, oldv, v))
                 if isinstance(oldv, dict):
                     oldv.update(v)
@@ -32,8 +32,6 @@ class Node(dict):
                     for item in v:
                         oldv.append(item)
                 else:
-                    if isinstance(v, dict):
-                        raise ValueError("Can't update uncoherent values for key %s, old value: %r, new value: %r" % (k, oldv, v))
                     self[k] = v
 
 class Config(Node):
