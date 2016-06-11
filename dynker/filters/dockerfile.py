@@ -68,7 +68,7 @@ class DockerfileFromFilter(PatternMatch, LineFilter) :
     Prio = 20
 
     def __init__(self, keepFirst=False, prio=None, tagResolver=None) :
-        super(DockerfileFromFilter, self).__init__('from[\s]{1,}([^\s:]{1,})(?::([^\s]{1,})|)', re.IGNORECASE)
+        super(DockerfileFromFilter, self).__init__('from[\s]{1,}([^\s:]{1,})(?::([^\s]{1,})|)', flags=re.IGNORECASE)
         if prio :
             self.prio = prio
         self.keepFirst = keepFirst

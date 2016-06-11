@@ -25,10 +25,10 @@ class FileFilter(Filter) :
         return file(path, *self.args, **self.kwds)
 
 class PatternMatch(object) :
-  def __init__(self,pattern=None, patternRe=None, prio=0):
+  def __init__(self,pattern=None, patternRe=None, prio=0, flags=0):
     self.prio = prio
     self.pattern = pattern
-    self.patternRe = patternRe if patternRe else re.compile(pattern)
+    self.patternRe = patternRe if patternRe else re.compile(pattern, flags)
     self.logger = logging.getLogger(self.__class__.__name__)
 
 class MatchingLineFilter(PatternMatch, LineFilter) :
