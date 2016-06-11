@@ -2,11 +2,9 @@ import os, sys
 import re
 from itertools import chain
 import unittest
+import importlib
 
 srcRe = re.compile("^([^/.]+)\.py$")
-
-def isImportable(self, module_name) :
-    __import__(module_name)
 
 def iterFiles(dsc) :
     base, dirnames, filenames = dsc
@@ -16,15 +14,13 @@ def iterFiles(dsc) :
         if f != '__init__.py' :
             moduleL.append(match.group(1))
         def test(self) :
-            return isImportable(self, '.'.join(moduleL))
+            importlib.import_module('.'.join(moduleL))
         test.__name__ = 'test_'+('_'.join(moduleL))
         return test.__name__, test
+
     for f in filenames :
-        if base == '.' and f == "setup.py" :
-            # worth not testing the setuptools stuff
-            continue
         match = srcRe.match(f)
         if match :
             yield add(baseL, match)
 
-TestImportable = type("TestImportable", (unittest.TestCase,), dict(chain(*map(iterFiles, os.walk('.')))))
+TestImportable = type("TestImportable", (unittest.TestCase,), dict(chain(*map(iterFiles, os.walk('dynker')))))
