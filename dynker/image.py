@@ -137,7 +137,7 @@ class ImageBuilder(object) :
             h.update(os.stat(source).st_mode)
             h.update(file(source).read())
         return h.hexdigest()
-    def build(self, client, **kwds) :
+    def build(self, client) :
         tag = self.buildTag()
         imageName = "%s:%s"%(self.name, tag)
         try:
