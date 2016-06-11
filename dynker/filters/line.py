@@ -5,14 +5,20 @@ import itertools
 
 class LineFilter(Filter):
 
-  def filter(self,input) :
+  def remove_nones(self, it):
+    for line in it:
+      if line is not None:
+        yield line
+
+  def filter(self,input, restore_type=False) :
     tpe = type(input)
     if isinstance(input, (str,unicode)) :
       input = input.splitlines(False)
     it = iter(input)
     for f in self :
       it = f.filter(it)
-    if tpe in (str,unicode) :
+    it = self.remove_nones(it)
+    if restore_type and tpe in (str,unicode) :
       return tpe("\n").join(it)
     return it
 
