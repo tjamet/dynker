@@ -112,7 +112,11 @@ class DockerfileDepExtractorFilter(DockerfileFromFilter) :
         return super(DockerfileDepExtractorFilter, self).__init__(prio=prio, **kwds)
     def getLine(self, match, line) :
         if match :
+            if not self.dumpFROM :
+                return None
             image, tag = self.getImageTag(match.group(1), match.group(2))
+            if self.keepFirst :
+                self.dumpFROM = False
             return image, tag
         return None
 
