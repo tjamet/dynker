@@ -88,7 +88,7 @@ class DockerfileFromFilter(PatternMatch, LineFilter) :
         if match :
             if not self.dumpFROM :
                 return None
-            image, tag = self.getImageTag(match.group(2), match.group(4))
+            image, tag = self.getImageTag(match.group(1), match.group(2))
             line = "FROM %s%s"%(image, ":%s"%tag if tag else "")
             self.logger.debug("line: %s, keep first : %r", line, self.keepFirst)
             if self.keepFirst :
