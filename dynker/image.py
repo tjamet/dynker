@@ -75,17 +75,13 @@ class ResolveSymLink(ExpandFileMapFilter) :
             yield dest, src
 
 class ImageBuilder(object) :
-    def __init__(self, name, dockerfile=None, contextMap={}, followSymLinks=False, expandDirectory=False) :
-        if not dockerfile :
-            dockerfile = {
-                paths :['Dockerfile']
-            }
-        if dockerfile.get('paths', None) is None :
-            dockerfile = copy(dockerfile)
-            dockerfile['paths'] = 'Dockerfile'
+    def __init__(self, name, contextPath, dockerfile=None, followSymLinks=False, expandDirectory=False, **kwds) :
+        if not dockerfile:
+            dockerfile = os.path.join(contextPath, 'Dockerfile')
         self.name = name
         self.dockerfile = dockerfile
-        self.contextMap = contextMap
+        self.dockerfileKwds = kwds
+        self.contextPath = contextPath
         self.logger = logging.getLogger(self.__class__.__name__)
         self.followSymLinks = followSymLinks
         self.expandDirectory = expandDirectory
@@ -97,7 +93,18 @@ class ImageBuilder(object) :
             fileListFilter.withFilter(ExpandDirectoryFilter())
         if self.followSymLinks :
             fileListFilter.withFilter(ResolveSymLink())
-        return dict(fileListFilter.filter(self.contextMap.iteritems()))
+        def iterContext():
+            for arcPattern in self.getDockerfile().listBuildFiles() :
+                repoPattern = os.path.join(self.contextPath,arcPattern)
+                for repoName in glob.glob(repoPattern) :
+                    arcName = os.path.normpath(
+                        os.path.relpath(
+                            repoName,
+                            self.contextPath
+                        )
+                    )
+                    yield (arcName, repoName)
+        return dict(fileListFilter.filter(iterContext()))
 
     def getContext(self):
         gzip = StringIO()
@@ -114,21 +121,7 @@ class ImageBuilder(object) :
         return gzip.getvalue()
 
     def getDockerfile(self, mapping=None) :
-        dockerfileMap = {}
-        if mapping is None :
-            mapping = self.expandContextMap()
-
-        dockerfiles = map(lambda x:os.path.normpath(os.path.join('/', x)), self.dockerfile['paths'])
-        for dest, src in mapping.iteritems() :
-            dest = os.path.normpath(os.path.join('/', dest))
-            if dest in dockerfiles :
-                dockerfileMap[dest] = src
-        dockerfileArgs = copy(self.dockerfile)
-        try :
-            dockerfileArgs['paths'] = map(lambda x : dockerfileMap[x], dockerfiles)
-        except KeyError :
-            raise ValueError("Failed to find Dockerfile(s) %r in image context %r %r"%(dockerfiles, mapping, dockerfileMap))
-        return Dockerfile(**dockerfileArgs)
+        return Dockerfile(self.dockerfile, **self.dockerfileKwds)
 
     def deps(self) :
         return self.expandContextMap().values()
