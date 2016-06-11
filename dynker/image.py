@@ -13,7 +13,6 @@ import termcolor
 from copy import copy
 from cStringIO import StringIO
 from filters import Filter
-from tools import GitHistory
 from .dockerfile import Dockerfile
 
 class FileMapFilter(Filter) :
