@@ -64,7 +64,7 @@ class Builder(object) :
             return imgBuilder.buildTag()
         return None
 
-    def build(self, client, names=None) :
+    def build(self, client, names=None, child_images=[]) :
         if isinstance(names, (str, unicode)):
             names = [names]
         def iter_buildable_deps(name):
@@ -78,16 +78,14 @@ class Builder(object) :
                     yield dep_name
                 except KeyError:
                     continue
-        deps = list(
-            itertools.chain(*itertools.imap(
-                iter_buildable_deps,
-                names)
-            )
-        )
-        self.logger.debug("Will build parent images %r", deps)
+        for name in names:
+            if name in child_images:
+                raise RuntimeError("depenency loop detected, %s some how depends on itself %s" %
+                    (name, ' -> '.join(child_images + [name]))
+                )
+            for dep_name in iter_buildable_deps(name):
+                self.build(client, dep_name, child_images=child_images+[name])
 
-        if deps:
-            self.build(client, deps)
         for name in names:
             self.getImage(name).build(client)
 

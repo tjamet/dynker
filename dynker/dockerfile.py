@@ -16,7 +16,7 @@ class Dockerfile(object) :
         return DockerfileFilter(optimizeLayers=self.optimizeLayers, keepFirstFrom=self.single, tagResolver=self.tagResolver)
     @property
     def depsFilter(self) :
-        return DockerfileDepExtractor(optimizeLayers=self.optimizeLayers, keepFirstFrom=self.single, tagResolver=self.tagResolver)
+        return DockerfileDepExtractor(optimizeLayers=self.optimizeLayers, keepFirstFrom=self.single)
     def imageTag(self, imgName) :
         return self.newTag
     def lines(self) :
