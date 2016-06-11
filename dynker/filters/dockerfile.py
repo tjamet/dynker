@@ -160,7 +160,7 @@ class DockerfileFilter(LineFilter, Filter) :
         self.withFilter(StripLinesFilter())
         self.withFilter(DockerileMultipleLine())
         self.withFilter(NotMatchingLineFilter("^(#.*|[\s]*)$", prio = 9))
-        self.withFilter(ReplaceLineReFilter(r"(.*[^\\])#.*", prio = 8))
+        self.withFilter(ReplaceLineReFilter(r"""^(.*[^\\])#[\w\s]*$""", prio = 8, sub=lambda match:match.group(1)))
         if optimizeLayers :
             self.withFilter(DockerfileOptLayers())
         self.withFilter(DockerfileOptApt())
