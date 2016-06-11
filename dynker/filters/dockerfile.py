@@ -31,7 +31,23 @@ class DockerfileOptLayers(PatternMatch, LineFilter) :
         if curLine :
             self.logger.debug("Producing output line %r", curLine)
             yield curLine
-                    
+
+class DockerileMultipleLine(LineFilter):
+    def __init__(self, prio=10):
+        super(DockerileMultipleLine, self).__init__()
+        self.prio = prio
+    def filter(self, it):
+        curLine = ""
+        for line in it:
+            if line.endswith(r'\\'):
+                curLine += line[:-2]
+            else:
+                curLine += line
+                yield curLine
+                curLine = ""
+        if curLine:
+            yield curLine + r'\\'
+
 class DockerfileOptYum(PatternMatch, LineFilter) :
     Prio = -20
 
@@ -140,6 +156,7 @@ class DockerfileFilter(LineFilter, Filter) :
     def __init__(self, optimizeLayers=False, keepFirstFrom=False, tagResolver=None, **args) :
         super(DockerfileFilter, self).__init__()
         self.withFilter(StripLinesFilter())
+        self.withFilter(DockerileMultipleLine())
         self.withFilter(NotMatchingLineFilter("^(#.*|[\s]*)$", prio = 9))
         self.withFilter(ReplaceLineReFilter(r"(.*[^\\])#.*", prio = 8))
         if optimizeLayers :
