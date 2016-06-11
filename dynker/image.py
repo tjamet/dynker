@@ -138,10 +138,15 @@ class ImageBuilder(object) :
             h.update(file(source).read())
         return h.hexdigest()
     def build(self, client, **kwds) :
-        context = self.getContext()
         tag = self.buildTag()
         imageName = "%s:%s"%(self.name, tag)
-        self.listenStream(client.build(fileobj=context, custom_context=True, tag=imageName, encoding='gzip'))
+        try:
+            client.inspect_image(imageName)
+        except docker.errors.NotFound:
+            context = self.getContext()
+            self.listenStream(client.build(fileobj=context, custom_context=True, tag=imageName, encoding='gzip'))
+        else:
+            self.logger.info("image %s already exist, use it rather than rebuilding it", imageName)
     def listenStream(self,stream) :
         for l in  stream:
             try :
