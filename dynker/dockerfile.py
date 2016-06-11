@@ -26,12 +26,16 @@ class Dockerfile(object) :
     def __str__(self) :
         return "\n".join(self.filter.filter(self.lines()))
     def deps(self) :
-        return self.paths
+        return self.paths + self.listBuildFiles()
     def imageDeps(self) :
         return list( self.depsFilter.filter(self.lines()) )
     def addFilter(self,*filters) :
         for filter in filters :
             self.filter.withFilter(filter)
+    def listBuildFiles(self):
+        '''Returns the list of files and glob pattern to be added in the build context
+        '''
+        return list(DockerfileAddExtractor().filter(self.lines()))
 
 def addDockerfileOptions(parser) :
     parser.add_option("-s", "--single", dest="single", action="store_true",

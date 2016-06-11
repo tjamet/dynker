@@ -112,13 +112,20 @@ class DockerfileDepExtractorFilter(DockerfileFromFilter) :
         return super(DockerfileDepExtractorFilter, self).__init__(prio=prio, **kwds)
     def getLine(self, match, line) :
         if match :
-            image, tag = self.getImageTag(match.group(2), match.group(4))
-            return image
+            image, tag = self.getImageTag(match.group(1), match.group(2))
+            return image, tag
         return None
 
 class DockerfileAddExtractorFilter(PatternMatch, LineFilter):
     def __init__(self, prio=float("-inf"), **kwds):
-        return super('add[\s]{1,}([^\s]{1,})[\s]{1,}([^\s]{1,})', re.IGNORECASE, **kwds)
+        return super(
+            DockerfileAddExtractorFilter,
+            self
+        ).__init__(
+            'add[\s]{1,}([^\s]{1,})[\s]{1,}([^\s]{1,})',
+            flags=re.IGNORECASE,
+            **kwds
+        )
     def getLine(self, match, line) :
         if match :
             return match.group(1)
@@ -144,3 +151,9 @@ class DockerfileDepExtractor(DockerfileFilter) :
     def __init__(self, keepFirstFrom=False, **kwds) :
         super(DockerfileDepExtractor, self).__init__(**kwds)
         self.withFilter(DockerfileDepExtractorFilter(keepFirst=keepFirstFrom))
+
+class DockerfileAddExtractor(DockerfileFilter) :
+    AutoFilter=False
+    def __init__(self, **kwds) :
+        super(DockerfileAddExtractor, self).__init__(**kwds)
+        self.withFilter(DockerfileAddExtractorFilter())
