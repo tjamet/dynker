@@ -2,7 +2,7 @@ import logging
 from .base import Filter
 from .line import *
 
-__all__ = [ "DockerfileFilter", "DockerfileDepExtractor" ]
+__all__ = [ "DockerfileFilter", "DockerfileDepExtractor", "DockerfileAddExtractor" ]
 
 class DockerfileOptLayers(PatternMatch, LineFilter) :
     Prio = -10
@@ -114,6 +114,14 @@ class DockerfileDepExtractorFilter(DockerfileFromFilter) :
         if match :
             image, tag = self.getImageTag(match.group(2), match.group(4))
             return image
+        return None
+
+class DockerfileAddExtractorFilter(PatternMatch, LineFilter):
+    def __init__(self, prio=float("-inf"), **kwds):
+        return super('add[\s]{1,}([^\s]{1,})[\s]{1,}([^\s]{1,})', re.IGNORECASE, **kwds)
+    def getLine(self, match, line) :
+        if match :
+            return match.group(1)
         return None
 
 class DockerfileFilter(LineFilter, Filter) :
