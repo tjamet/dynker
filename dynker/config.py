@@ -8,6 +8,21 @@ class Node(dict):
         super(Node, self).__init__()
         self.update(values)
 
+    @classmethod
+    def from_kv(cls, kvs):
+        self = cls()
+        for kv in kvs:
+            k, v = self.parse_kv(kv)
+            node = {}
+            child = node
+            keys = self.parse_key(k)
+            for key in keys[:-1]:
+                child[key] = {}
+                child = child[key]
+            child[keys[-1]] = v
+            self.update(node)
+        return self
+
     def update(self, other):
         for k, v in six.iteritems(other):
             try:
@@ -34,30 +49,6 @@ class Node(dict):
                 else:
                     self[k] = v
 
-class Config(Node):
-
-    def __init__(self, options=[], config_path=None):
-        super(Config, self).__init__()
-        for path in (
-            os.path.join(os.path.expanduser("~"), ".dynker", "config.yml"),
-            os.getenv('DYNKER_CONFIG', None),
-            '.dynker.yml',
-        ):
-            if path and os.path.exists(path):
-                self.update(yaml.load(open(path, 'r')))
-        if config_path is not None:
-            self.update(yaml.load(open(config_path, 'r')))
-        for opt in options:
-            k, v = self.parse_kv(opt)
-            node = {}
-            child = node
-            keys = self.parse_key(k)
-            for key in keys[:-1]:
-                child[key] = {}
-                child = child[key]
-            child[keys[-1]] = v
-            self.update(node)
-
     def parse_key(self, key):
         r = key.split('.')
         if r == ['']:
@@ -79,3 +70,17 @@ class Config(Node):
         except KeyError:
             return default
 
+class Config(Node):
+
+    def __init__(self, options=[], config_path=None):
+        super(Config, self).__init__()
+        for path in (
+            os.path.join(os.path.expanduser("~"), ".dynker", "config.yml"),
+            os.getenv('DYNKER_CONFIG', None),
+            '.dynker.yml',
+        ):
+            if path and os.path.exists(path):
+                self.update(yaml.load(open(path, 'r')))
+        if config_path is not None:
+            self.update(yaml.load(open(config_path, 'r')))
+        self.update(Node.from_kv(options))
