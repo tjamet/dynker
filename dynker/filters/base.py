@@ -31,9 +31,6 @@ class Filter(object) :
   def __iter__(self) :
     return self.iterFilters(withTemplates=False, sort=True)
 
-  def setPrio(self,prio) :
-    self.prio = prio
-
   def withFilter(self,filter) :
     self.filters.append(filter)
     return self
