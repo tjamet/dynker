@@ -41,11 +41,11 @@ class Filter(object) :
   def filter(*args,**kwds) :
     raise NotImplementedError("Cannot run a filter on the base filter please use Implementation instead")
 
-  def withAllFilters(self, **kwds) :
+  def withAllFilters(self, *args, **kwds) :
     def addFilters(cls) :
         for c in cls.__subclasses__() :
             if c.AutoFilter :
-                self.withFilter(c(**kwds))
+                self.withFilter(c(*args, **kwds))
             addFilters(c)
     addFilters(self.__class__)
 
