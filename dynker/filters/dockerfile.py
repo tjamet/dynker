@@ -146,10 +146,12 @@ class DockerfileAddExtractorFilter(PatternMatch, LineFilter):
             flags=re.IGNORECASE,
             **kwds
         )
-    def getLine(self, match, line) :
-        if match :
-            return match.group(1)
-        return None
+
+    def filter(self, it):
+        for line in super(DockerfileAddExtractorFilter, self).filter(it):
+            match = self.patternRe.match(line)
+            if match :
+                yield match.group(1)
 
 class DockerfileFilter(LineFilter, Filter) :
     #simply declare the root class
