@@ -30,6 +30,7 @@ class PatternMatch(object) :
     self.pattern = pattern
     self.patternRe = patternRe if patternRe else re.compile(pattern, flags)
     self.logger = logging.getLogger(self.__class__.__name__)
+    super(PatternMatch, self).__init__()
 
 class MatchingLineFilter(PatternMatch, LineFilter) :
 
