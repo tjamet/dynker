@@ -1,8 +1,10 @@
+import fnmatch
 import sys
 import os
 import itertools
 import logging
 import glob
+import re
 import yaml
 
 from .dockerfile import Dockerfile
@@ -25,28 +27,63 @@ class Builder(object) :
                     }
                 ],
             ))
+        self.patterns = []
+        for image in config['images']:
+            # When path is provided and globbed, Dockerfile refers to its location
+            # When path is provided but not globbed, Dockerfile refers to the current path
+            # When Dockerfile is provided and globbed, path must not be globbed, both
+            # refers to the current directory
+            path = image.get('path', None)
+            dockerfile = image.get('Dockerfile', 'Dockerfile')
+            name = image.get('name', None)
+
+            if path is None:
+                path = '.'
+
+            if '*' in path:
+                if '*' in dockerfile:
+                    raise ValueError('Ambiguity in your configuration for %r, globbing can'
+                        'be done either in "Dockerfile" or "path" key but not both at the'
+                        'same time' % image)
+
+                dockerfile = os.path.join(path, dockerfile)
+                path = re.compile(re.sub('^.*/([^*]*)$', r'(?P<path>.*)/\1', dockerfile))
+
+            if name is None:
+                name = dockerfile
+            if '*' in name:
+                start = re.sub('^([^*]*/|).*', r'^\1(?P<name>.*)', dockerfile)
+                end = re.sub('^.*\*(?:|[^/]*)(/.*)$', r'\1$', dockerfile)
+                name = re.compile(start + end)
+
+            pattern = {
+                'name': name,
+                'path': path,
+                'Dockerfile': dockerfile,
+            }
+            self.patterns.append(pattern)
         self.config = config
+
+    def get_matching_pattern(self, pattern, name, path):
+        pattern = pattern[name]
+        if isinstance(pattern, (str, unicode)):
+            return pattern
+        else:
+            match = pattern.match(path)
+            if match:
+                return match.group(name)
+        return None
+        
 
     def getImage(self, image_name):
         try:
             return self.images[image_name]
         except KeyError:
             self.logger.debug('image builder cache miss, try to find it')
-            for img_cfg in self.config.get('images', []):
-                dockerfile = img_cfg.get('Dockerfile', 'Dockerfile')
-                pattern = os.path.join(
-                    img_cfg['path'],
-                    dockerfile
-                )
-                for path in glob.glob(pattern):
-                    pre = img_cfg.get('pattern', pattern).split('*', 1)[0]
-                    post = img_cfg.get('pattern', pattern).rsplit('*', 1)[1]
-                    context_path = path[:-len(dockerfile)-1]
-                    found_image_name = context_path
-                    if pre and found_image_name.startswith(pre):
-                        found_image_name = found_image_name[len(pre):]
-                    if post and found_image_name.endswith(post):
-                        found_image_name = found_image_name[-len(post):]
+            for img_cfg in self.patterns:
+                for path in glob.glob(img_cfg['Dockerfile']):
+                    found_image_name = self.get_matching_pattern(img_cfg, 'name', path)
+                    context_path = self.get_matching_pattern(img_cfg, 'path', path)
                     if found_image_name == image_name:
                         image = ImageBuilder(image_name,
                             contextPath=context_path,
@@ -80,7 +117,7 @@ class Builder(object) :
                     continue
         for name in names:
             if name in child_images:
-                raise RuntimeError("depenency loop detected, %s some how depends on itself %s" %
+                raise RuntimeError("dependency loop detected, %s some how depends on itself %s" %
                     (name, ' -> '.join(child_images + [name]))
                 )
             for dep_name in iter_buildable_deps(name):
