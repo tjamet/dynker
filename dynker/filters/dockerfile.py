@@ -83,11 +83,11 @@ class DockerfileOptApt(PatternMatch, LineFilter) :
 class DockerfileFromFilter(PatternMatch, LineFilter) :
     Prio = 20
 
-    def __init__(self, keepFirst=False, prio=None, tagResolver=None) :
+    def __init__(self, keepFirstFrom=False, prio=None, tagResolver=None) :
         super(DockerfileFromFilter, self).__init__('from[\s]{1,}([^\s:]{1,})(?::([^\s]{1,})|)', flags=re.IGNORECASE)
         if prio :
             self.prio = prio
-        self.keepFirst = keepFirst
+        self.keepFirstFrom = keepFirstFrom
         self.tagResolver = tagResolver
 
     def getImageTag(self, image, tag) :
@@ -106,8 +106,8 @@ class DockerfileFromFilter(PatternMatch, LineFilter) :
                 return None
             image, tag = self.getImageTag(match.group(1), match.group(2))
             line = "FROM %s%s"%(image, ":%s"%tag if tag else "")
-            self.logger.debug("line: %s, keep first : %r", line, self.keepFirst)
-            if self.keepFirst :
+            self.logger.debug("line: %s, keep first : %r", line, self.keepFirstFrom)
+            if self.keepFirstFrom :
                 self.dumpFROM = False
         return line
 
@@ -131,7 +131,7 @@ class DockerfileDepExtractorFilter(DockerfileFromFilter) :
             if not self.dumpFROM :
                 return None
             image, tag = self.getImageTag(match.group(1), match.group(2))
-            if self.keepFirst :
+            if self.keepFirstFrom :
                 self.dumpFROM = False
             return image, tag
         return None
@@ -165,15 +165,15 @@ class DockerfileFilter(LineFilter, Filter) :
             self.withFilter(DockerfileOptLayers())
         self.withFilter(DockerfileOptApt())
         self.withFilter(DockerfileOptYum())
-        self.withFilter(DockerfileFromFilter(tagResolver=tagResolver, keepFirst=keepFirstFrom))
+        self.withFilter(DockerfileFromFilter(tagResolver=tagResolver, keepFirstFrom=keepFirstFrom))
         # add all userdefined filters
         self.withAllFilters(optimizeLayers=optimizeLayers, keepFirstFrom=keepFirstFrom, tagResolver=tagResolver, **args)
 
 class DockerfileDepExtractor(DockerfileFilter) :
     AutoFilter=False
-    def __init__(self, keepFirstFrom=False, **kwds) :
+    def __init__(self, **kwds) :
         super(DockerfileDepExtractor, self).__init__(**kwds)
-        self.withFilter(DockerfileDepExtractorFilter(keepFirst=keepFirstFrom))
+        self.withFilter(DockerfileDepExtractorFilter())
 
 class DockerfileAddExtractor(DockerfileFilter) :
     AutoFilter=False
