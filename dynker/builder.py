@@ -126,6 +126,12 @@ class Builder(object) :
         for name in names:
             self.getImage(name).build(client)
 
+    def tag(self, client, tags, images, **kwds):
+        if tags is None:
+            tags = ['latest']
+        for image in images:
+            self.getImage(image).tag(client, tags, **kwds)
+
 def main(argv=sys.argv) :
     import sys, os
     import yaml
@@ -135,7 +141,7 @@ def main(argv=sys.argv) :
     from .dockerfile import addDockerfileOptions
     from .image import addImageOptions
     parser = OptionParser()
-    parser.add_option("-t", "--tag", dest="tag", default="",
+    parser.add_option("-t", "--tag", dest="tag", default=None, action='append',
                       help="Repository name (and optionally a tag) to be applied to the resulting image in case of success")
     addCommonOptions(parser)
     addDockerfileOptions(parser)
@@ -144,6 +150,7 @@ def main(argv=sys.argv) :
     commonSetUp(options)
     builder = Builder()
     builder.build(Client.from_env(), args)
+    builder.tag(Client.from_env(), options.tag, args)
 
 if __name__ == "__main__" :
     main()

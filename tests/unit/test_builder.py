@@ -12,11 +12,16 @@ class TestBuilder(unittest.TestCase):
     def test_main(self, client):
         cl = mock.Mock()
         cl.inspect_image = mock.Mock(return_value={})
+        cl.tag = mock.Mock(return_value=1)
 
         client.from_env = mock.Mock(return_value=cl)
         command = ['build', 'layer10', '-v']
         tested_module.main(command)
         cl.inspect_image.call_count.should.eql(12)
+        cl.tag.call_count.should.eql(1)
+        cl.tag.mock_calls.should.contain(
+            mock.call(mock.ANY, 'layer10', 'latest', force=True)
+        )
 
     def test_build_order(self):
         class ImageBuilder(object):

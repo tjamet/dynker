@@ -84,6 +84,18 @@ class ImageBuilder(object) :
             self.listenStream(client.build(fileobj=context, custom_context=True, tag=imageName, encoding='gzip'), fd=out_fd)
         else:
             self.logger.info("image %s already exist, use it rather than rebuilding it", imageName)
+    def tag(self, client, tags, registries=[], force=True):
+        if not isinstance(tags, (list, tuple)):
+            tags = [tags]
+        buildTag = self.buildTag()
+        for registry in [None]+registries:
+            for tag in tags:
+                image_name = self.name
+                if registry:
+                    image_name = '%s/%s' % (registry, image_name)
+                self.logger.info('tagging image %s:%s to %s:%s', self.name, buildTag, image_name, tag)
+                if not client.tag('%s:%s' % (self.name, buildTag), image_name, tag, force=force):
+                    raise RuntimeError("Failed to tag image %s" % image_name)
     def listenStream(self,stream, fd=sys.stdout) :
         head = termcolor.colored('[{name}]:', 'cyan').format(name=self.name)
         for l in  stream:
