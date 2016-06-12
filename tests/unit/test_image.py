@@ -1,0 +1,165 @@
+import dynker.image as tested_module
+import docker.errors
+import unittest
+import tarfile
+import json
+
+from cStringIO import StringIO
+from .. import mock
+
+class TestImage(unittest.TestCase):
+
+
+    def test_listensteam(self):
+        image = tested_module.ImageBuilder('dynker', 'tests/fixtures/docker/test')
+        fd = StringIO()
+        image.listenStream(fd=fd, stream=map(json.dumps,[
+            {'stream': 'streamed-value\n'},
+            {'status': 'done'},
+        ])+[
+            "some non-json line",
+        ])
+        fd.getvalue().should.eql(
+            '\x1b[36m[dynker]:\x1b[0m streamed-value\n'
+            '\x1b[36m[dynker]:\x1b[0m done\n'
+            "\x1b[36m[dynker]:\x1b[0m some non-json line",
+        )
+        image.listenStream.when.called_with([json.dumps(
+            {'errorDetail':{'message': 'error message\n'}},
+        )]).should.throw(ValueError, 'error message')
+        image.listenStream.when.called_with([json.dumps(
+            {},
+        )]).should.throw(RuntimeError, '{}')
+
+    def test_build(self):
+        client = mock.Mock()
+        client.inspect_image = mock.Mock()
+        client.build = mock.Mock()
+        Builder = tested_module.ImageBuilder
+        image = tested_module.ImageBuilder('dynker', 'tests/fixtures/docker/test')
+
+        client.inspect_image.return_value = {'Id': 'fake image id'}
+
+        image.build(client)
+        client.build.assert_not_called()
+
+        def inspect_image(*args, **kwds):
+            raise docker.errors.NotFound("message", "response", "explanation")
+
+        client.inspect_image.side_effect = inspect_image
+        client.build.return_value = [
+            json.dumps({'stream': 'build in progress1\r'}),
+            json.dumps({'stream': 'build in progress2\r'}),
+            json.dumps({'stream': 'build in progress3\033[K\r'}),
+            json.dumps({'stream': 'build in progress4\033[K\r'}),
+            json.dumps({'stream': 'build done\033[K\n'}),
+        ]
+        image.build(client)
+        client.build.mock_calls.should.be.eql([
+            mock.call(
+                fileobj=image.getContext(),
+                custom_context=True,
+                encoding='gzip',
+                tag='%s:%s' % ('dynker', image.buildTag()),
+            )
+        ])
+
+    def test_deps(self):
+        with mock.patch.object(tested_module.ImageBuilder,
+                'expandContextMap',
+                return_value={'file1': 'some/path/file1', 'file2': 'some/path/file2'}):
+            image = tested_module.ImageBuilder('test-image', 'some/path')
+            deps = image.deps()
+            deps.should.contain('some/path/file1')
+            deps.should.contain('some/path/file2')
+            deps.should.have.length_of(2)
+
+    def test_build_context(self):
+        image = tested_module.ImageBuilder('dynker', '.', dockerfile='docker/dynker/Dockerfile', expandDirectory=True)
+        context = StringIO(image.getContext())
+        tar = tarfile.open(fileobj=context, mode='r|gz')
+        # just check if the Dockerfile has been created.
+        tar.getmember('Dockerfile')
+
+    def test_buildtag(self):
+        image = tested_module.ImageBuilder('dynker', 'tests/fixtures/docker/test')
+        image.buildTag().should.be.eql('22166d05673626d4eb4de3e305d32142c860ee8c')
+
+    def test_image_deps(self):
+        with mock.patch.object(tested_module.Dockerfile,
+                'imageDeps',
+                return_value=[('image_name', None)]):
+            image = tested_module.ImageBuilder('test-image', 'some/path')
+            image.imageDeps.when.called_with().should.return_value([
+                ('image_name', None),
+            ])
+
+    def test_contextmap(self):
+        files = [
+            "file1",
+            "file2",
+        ]
+        with mock.patch.object(
+                tested_module.Dockerfile,
+                'listBuildFiles',
+                return_value=files):
+            with mock.patch.object(
+                    tested_module.ExpandFileMapFilter,
+                    'filter',
+                    side_effect=lambda x: x) as filemap:
+                with mock.patch.object(
+                        tested_module.ExpandDirectoryFilter,
+                        'filter',
+                        side_effect=lambda x: x) as directory:
+                    with mock.patch.object(
+                            tested_module.ResolveSymLink,
+                            'filter',
+                            side_effect=lambda x: x) as symlink:
+
+                        image = tested_module.ImageBuilder('test-image', 'some/path')
+                        image.expandContextMap.when.called_with().should.return_value({
+                            "file1": "some/path/file1",
+                            "file2": "some/path/file2",
+                        })
+                        filemap.assert_called_once()
+                        directory.assert_not_called()
+                        symlink.assert_not_called()
+
+                        filemap.reset_mock()
+                        directory.reset_mock()
+                        symlink.reset_mock()
+
+                        image = tested_module.ImageBuilder('test-image', 'some/path', followSymLinks=True)
+                        image.expandContextMap.when.called_with().should.return_value({
+                            "file1": "some/path/file1",
+                            "file2": "some/path/file2",
+                        })
+                        filemap.assert_called_once()
+                        directory.assert_not_called()
+                        symlink.assert_called_once()
+
+                        filemap.reset_mock()
+                        directory.reset_mock()
+                        symlink.reset_mock()
+
+                        image = tested_module.ImageBuilder('test-image', 'some/path', expandDirectory=True)
+                        image.expandContextMap.when.called_with().should.return_value({
+                            "file1": "some/path/file1",
+                            "file2": "some/path/file2",
+                        })
+                        filemap.assert_called_once()
+                        directory.assert_called_once()
+                        symlink.assert_not_called()
+
+                        filemap.reset_mock()
+                        directory.reset_mock()
+                        symlink.reset_mock()
+
+                        image = tested_module.ImageBuilder('test-image', 'some/path', followSymLinks=True, expandDirectory=True)
+                        image.expandContextMap.when.called_with().should.return_value({
+                            "file1": "some/path/file1",
+                            "file2": "some/path/file2",
+                        })
+                        filemap.assert_called_once()
+                        directory.assert_called_once()
+                        symlink.assert_called_once()

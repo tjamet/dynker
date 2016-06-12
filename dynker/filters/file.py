@@ -39,6 +39,7 @@ class ExpandFileMapFilter(FileMapFilter) :
 
 class ExpandDirectoryFilter(FileMapFilter) :
     Prio=10
+    AutoFilter = False
     def __init__(self,*args,**kwds) :
         self.logger = logging.getLogger(self.__class__.__name__)
     def filter(self, it) :

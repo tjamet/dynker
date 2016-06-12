@@ -30,6 +30,7 @@ class ImageBuilder(object) :
     def expandContextMap(self) :
         fileListFilter = FileMapFilter()
         self.logger.debug("getting content")
+        fileListFilter.withFilter(ExpandFileMapFilter())
         if self.expandDirectory :
             fileListFilter.withFilter(ExpandDirectoryFilter())
         if self.followSymLinks :
@@ -66,22 +67,24 @@ class ImageBuilder(object) :
     def buildTag(self) :
         h = hashlib.sha1()
         h.update(str(self.getDockerfile()))
-        for destination, source in self.expandContextMap():
-            h.update(source)
-            h.update(os.stat(source).st_mode)
+        mapping = self.expandContextMap()
+        for destination, source in mapping.iteritems():
+            h.update(destination)
+            h.update(str(os.stat(source).st_mode))
             h.update(file(source).read())
         return h.hexdigest()
-    def build(self, client) :
+    def build(self, client, out_fd=sys.stdout) :
         tag = self.buildTag()
         imageName = "%s:%s"%(self.name, tag)
         try:
             client.inspect_image(imageName)
         except docker.errors.NotFound:
+            print 'excepted'
             context = self.getContext()
-            self.listenStream(client.build(fileobj=context, custom_context=True, tag=imageName, encoding='gzip'))
+            self.listenStream(client.build(fileobj=context, custom_context=True, tag=imageName, encoding='gzip'), fd=out_fd)
         else:
             self.logger.info("image %s already exist, use it rather than rebuilding it", imageName)
-    def listenStream(self,stream) :
+    def listenStream(self,stream, fd=sys.stdout) :
         head = termcolor.colored('[{name}]:', 'cyan').format(name=self.name)
         for l in  stream:
             try :
@@ -99,7 +102,7 @@ class ImageBuilder(object) :
                 self.logger.error("Failed to decode stream %s",l)
             except ValueError:
                 line = l
-            sys.stdout.write('{head} {line}'.format(head=head, line=line))
+            fd.write('{head} {line}'.format(head=head, line=line))
 
 def addImageOptions(parser) :
     parser.add_option("--force-rm", dest="single", action="store_true",

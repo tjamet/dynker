@@ -113,7 +113,6 @@ class TestFileFilters(unittest.TestCase):
         ])
 
         expected_content = [
-            ("destination/dynker/config.yml",                  "tests/fixtures/config.yml"),
             ("destination/dynker/folder/.hidden/.hidden/file", "tests/fixtures/folder/.hidden/.hidden/file"),
             ("destination/dynker/folder/.hidden/file",         "tests/fixtures/folder/.hidden/file"),
             ("destination/dynker/folder/.hidden-file",         "tests/fixtures/folder/.hidden-file"),
@@ -122,7 +121,7 @@ class TestFileFilters(unittest.TestCase):
             ("destination/dynker/folder/level1/level2/file",   "tests/fixtures/folder/level1/level2/file"),
         ]
         mapping = filter.filter([
-            ('destination/dynker', 'tests/fixtures/'),
+            ('destination/dynker/folder', 'tests/fixtures/folder'),
         ])
         mapping.should.have.length_of(len(expected_content))
         for content in expected_content:
