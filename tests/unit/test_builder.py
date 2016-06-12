@@ -15,12 +15,15 @@ class TestBuilder(unittest.TestCase):
         cl.tag = mock.Mock(return_value=1)
 
         client.from_env = mock.Mock(return_value=cl)
-        command = ['build', 'layer10', '-v']
+        command = ['build', 'layer10', '-v', '--registry', 'docker.my-company.com']
         tested_module.main(command)
         cl.inspect_image.call_count.should.eql(12)
-        cl.tag.call_count.should.eql(1)
+        cl.tag.call_count.should.eql(2)
         cl.tag.mock_calls.should.contain(
             mock.call(mock.ANY, 'layer10', 'latest', force=True)
+        )
+        cl.tag.mock_calls.should.contain(
+            mock.call(mock.ANY, 'docker.my-company.com/layer10', 'latest', force=True)
         )
 
     def test_build_order(self):

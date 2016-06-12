@@ -142,7 +142,9 @@ def main(argv=sys.argv) :
     from .image import addImageOptions
     parser = OptionParser()
     parser.add_option("-t", "--tag", dest="tag", default=None, action='append',
-                      help="Repository name (and optionally a tag) to be applied to the resulting image in case of success")
+                      help="tag(s) to be applied to the resulting image in case of success")
+    parser.add_option("--registry", dest="registry", default=None, action='append',
+                      help="Registry on which the image should tagged (<registry>/<name>:<tag>)")
     addCommonOptions(parser)
     addDockerfileOptions(parser)
     addImageOptions(parser)
@@ -150,7 +152,7 @@ def main(argv=sys.argv) :
     commonSetUp(options)
     builder = Builder()
     builder.build(Client.from_env(), args)
-    builder.tag(Client.from_env(), options.tag, args)
+    builder.tag(Client.from_env(), options.tag, args, registries=options.registry)
 
 if __name__ == "__main__" :
     main()
