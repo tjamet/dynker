@@ -8,8 +8,9 @@ If you do not have root acces or do not want to bother your co-workers on the sa
 
 ## Use
 
-The purpose of this tool is to build docker images described on a yaml file (dynker.yml), sequenced in
-a way that `FROM` images are built before the images requiring them.
+The purpose of this tool is to build docker images taking care of image dependencies.
+Meaning, `myimage` has a `FROM parent` appears in a Dockerfile, if `parent` is known as buildable
+by the tool, it will be built prior to `myimage` build
 
 The followings are also handled:
 - Tag the built images with the last commit hash on the build context
@@ -20,43 +21,37 @@ The followings are also handled:
     https://bugzilla.redhat.com/show_bug.cgi?id=1213602#c13)
 
 ### Example
-`dynker.yml`
+`~/.dynker/config.yml`
 ```
 ---
-build:
-    imageName: user/baseImageWithBuildTools
-    context:
-      /src: .
-      /Dockerfile: build/Dockerfile
-test:
-    imageName: testingImage
-    context:
-      /repo: .
-package:
-    imageName: user/imageName
-    context:
-      /packaging: packaging
+images:
+    -
+        path: docker/*
+    -
+        path: /home/username/git/otherrepo/
+        Dockerfile: docker/*/Dockerfile
 ```
 
-`build/Dockerfile`
+`docker/dev/Dockerfile`
 ```
-FROM debian:jessie
-RUN  apt-get install -y python-pip
-ADD  src /src
-WORKDIR /src
+FROM prod
+ADD  requirements-dev.txt /tmp/requirements-dev.txt
+RUN  pip install -r /tmp/requirements-dev.txt
+RUN  py.test tests
 ```
-`test/Dockerfile`
+`docker/prod/Dockerfile`
 ```
-FROM user/baseImageWithBuildTools
-RUN  python setup.py develop
-RUN  python -m unittest discover
+FROM base
+ADD  requirements.txt /tmp/requirements.txt
+RUN  pip install -r /tmp/requirements.txt
+ADD  mylib /usr/local/lib/python3.5/site-packages/mylib
 ```
-`package/Dockerfile`
+`/home/username/git/otherrepo/docker/base/Dockerfile`
 ```
-FROM user/baseImageWithBuildTools
-RUN  python setup.py install
-RUN  rm -rf /src
+FROM python:3.5-alpine
+RUN  apk update && apk add my-company-package
 ```
-Then, `dynker build` will :
- 1. build user/baseImageWithBuildTools
- 2. Build testingImage and imageName
+Then, `dynker build dev` will :
+ 1. build the base image from its sources
+ 2. build the production image from its sources
+ 3. build the development image
