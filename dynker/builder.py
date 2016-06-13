@@ -132,27 +132,44 @@ class Builder(object) :
         for image in images:
             self.getImage(image).tag(client, tags, **kwds)
 
-def main(argv=sys.argv) :
-    import sys, os
-    import yaml
-    from optparse import OptionParser
-    from docker import Client
+
+COMMAND_NAME='build'
+def add_options(parser):
     from . import addCommonOptions, commonSetUp
     from .dockerfile import addDockerfileOptions
     from .image import addImageOptions
-    parser = OptionParser()
-    parser.add_option("-t", "--tag", dest="tag", default=None, action='append',
+    try:
+        add = parser.add_argument
+    except AttributeError:
+        add = parser.add_option
+    add("image", nargs="*",
+                      help="images to build")
+    add("-t", "--tag", dest="tag", default=None, action='append',
                       help="tag(s) to be applied to the resulting image in case of success")
-    parser.add_option("--registry", dest="registry", default=None, action='append',
+    add("--registry", dest="registry", default=[], action='append',
                       help="Registry on which the image should tagged (<registry>/<name>:<tag>)")
     addCommonOptions(parser)
     addDockerfileOptions(parser)
     addImageOptions(parser)
-    (options, args) = parser.parse_args(argv[1:])
-    commonSetUp(options)
+
+def main(argv=sys.argv, args=None) :
+    """
+    Builds a list of images
+    """
+    from . import commonSetUp
+    if not args:
+        import argparse
+        parser = argparse.ArgumentParser()
+        add_options(parser)
+        args = parser.parse_args(argv[1:])
+    import sys, os
+    import yaml
+    from docker import Client
+    from . import commonSetUp
+    commonSetUp(args)
     builder = Builder()
-    builder.build(Client.from_env(), args)
-    builder.tag(Client.from_env(), options.tag, args, registries=options.registry)
+    builder.build(Client.from_env(), args.image)
+    builder.tag(Client.from_env(), args.tag, args.image, registries=args.registry)
 
 if __name__ == "__main__" :
     main()

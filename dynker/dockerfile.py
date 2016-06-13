@@ -29,38 +29,38 @@ class Dockerfile(object) :
         return self.paths + self.listBuildFiles()
     def imageDeps(self) :
         return list( self.depsFilter.filter(self.lines()) )
-    def addFilter(self,*filters) :
-        for filter in filters :
-            self.filter.withFilter(filter)
     def listBuildFiles(self):
         '''Returns the list of files and glob pattern to be added in the build context
         '''
         return list(DockerfileAddExtractor().filter(self.lines()))
 
 def addDockerfileOptions(parser) :
-    parser.add_option("-s", "--single", dest="single", action="store_true",
-                      help="Filters the Dockerfile FROM directives so that they are concatenated to produce a single image")
-    parser.add_option("-o", "--optimize", dest="optimize", action="store_true",
+    parser.add_argument("-s", "--single", dest="single", action="store_true",
+        help="Filters the Dockerfile FROM directives so that they are concatenated to produce a single image")
+    parser.add_argument("-o", "--optimize", dest="optimize", action="store_true",
                       help="Conatenate consecutive RUN directives to reduce layer number")
-
-def main(argv=sys.argv) :
-    from optparse import OptionParser
-    from . import addCommonOptions, commonSetUp
-    parser = OptionParser()
-    parser.add_option("-f", "--file", dest="files", default=[], action="append",
+def add_options(parser):
+    from . import addCommonOptions
+    parser.add_argument("file", default=[], nargs="*",
                       help="Path to the Dockerfile to use. If the path is a relative path then it must be relative to the current directory. The file must be within the build context. The default is Dockerfile.", metavar="FILE")
-    parser.add_option("-t", "--tag", dest="tag", default=None,
+    parser.add_argument("-f", "--file", dest="files", default=[], action="append",
+                      help="Path to the Dockerfile to use. If the path is a relative path then it must be relative to the current directory. The file must be within the build context. The default is Dockerfile.", metavar="FILE")
+    parser.add_argument("-t", "--tag", dest="tag", default=None,
                       help="Rewrites FROM directives with TAG", metavar="TAG")
     addCommonOptions(parser)
     addDockerfileOptions(parser)
-    (options, args) = parser.parse_args(argv[1:])
-    commonSetUp(options)
-    if not options.files and not args :
-        options.files = ["Dockerfile"]
-    dockerfile = Dockerfile(options.files + args, single=options.single, optimizeLayers=options.optimize, newTag=options.tag)
-    dockerfile.tag = options.tag
-    print dockerfile
-    print dockerfile.deps()
 
-if __name__ == "__main__" :
-    main()
+def main(argv=sys.argv, args=None) :
+    from . import commonSetUp
+    if not args:
+        import argparse
+        parser = argparse.ArgumentParser()
+        add_options(parser)
+        args = parser.parse_args(argv[1:])
+    commonSetUp(args)
+    files = args.files + args.file
+    if not files :
+        files = ["Dockerfile"]
+    dockerfile = Dockerfile(files, single=args.single, optimizeLayers=args.optimize, newTag=args.tag)
+    dockerfile.tag = args.tag
+    print dockerfile

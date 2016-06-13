@@ -1,6 +1,10 @@
 import logging
 def addCommonOptions(parser) :
-    parser.add_option("-v","--verbose",
+    try:
+        add = parser.add_argument
+    except AttributeError:
+        add = parser.add_option
+    add("-v","--verbose",
                       dest="verbose", action="count",
                       help="switches the debug mode -v sets info logging, -vv sets debug logging")
 def commonSetUp(options) :
