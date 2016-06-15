@@ -79,7 +79,6 @@ class ImageBuilder(object) :
         try:
             client.inspect_image(imageName)
         except docker.errors.NotFound:
-            print 'excepted'
             context = self.getContext()
             self.listenStream(client.build(fileobj=context, custom_context=True, tag=imageName, encoding='gzip'), fd=out_fd)
         else:
