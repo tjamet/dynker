@@ -1,10 +1,11 @@
+import glob
 import fnmatch
-import sys
-import os
 import itertools
 import logging
-import glob
+import os
 import re
+import six
+import sys
 import yaml
 
 from .dockerfile import Dockerfile
@@ -66,7 +67,7 @@ class Builder(object) :
 
     def get_matching_pattern(self, pattern, name, path):
         pattern = pattern[name]
-        if isinstance(pattern, (str, unicode)):
+        if isinstance(pattern, six.string_types):
             return pattern
         else:
             match = pattern.match(path)
@@ -102,7 +103,7 @@ class Builder(object) :
         return None
 
     def build(self, client, names=None, child_images=[]) :
-        if isinstance(names, (str, unicode)):
+        if isinstance(names, six.string_types):
             names = [names]
         def iter_buildable_deps(name):
             """

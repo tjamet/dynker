@@ -1,10 +1,11 @@
-import sys
 import dynker.filters
 import logging
+import six
+import sys
 
 class Dockerfile(object) :
     def __init__(self, paths, single=False, optimizeLayers=False, tagResolver=None, newTag=None):
-        if isinstance(paths, (str,unicode)) :
+        if isinstance(paths, six.string_types) :
             paths = [paths]
         self.paths = paths
         self.tagResolver = tagResolver if tagResolver is not None else self
@@ -21,7 +22,7 @@ class Dockerfile(object) :
         return self.newTag
     def lines(self) :
         for path in self.paths :
-            for line in file(path) :
+            for line in open(path) :
                 yield line
     def __str__(self) :
         return "\n".join(self.filter.filter(self.lines()))
@@ -63,4 +64,5 @@ def main(argv=sys.argv, args=None) :
         files = ["Dockerfile"]
     dockerfile = Dockerfile(files, single=args.single, optimizeLayers=args.optimize, newTag=args.tag)
     dockerfile.tag = args.tag
-    print dockerfile
+    sys.stdout.write(str(dockerfile))
+    sys.stdout.write('\n')

@@ -5,7 +5,7 @@ def addCommonOptions(parser) :
     except AttributeError:
         add = parser.add_option
     add("-v","--verbose",
-                      dest="verbose", action="count",
+                      dest="verbose", action="count", default=0,
                       help="switches the debug mode -v sets info logging, -vv sets debug logging")
 def commonSetUp(options) :
     if options.verbose>1 :

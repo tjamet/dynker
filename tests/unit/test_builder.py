@@ -1,8 +1,8 @@
 import dynker.builder as tested_module
 import dynker.config
 import unittest
+import six
 
-from cStringIO import StringIO
 from .. import mock
 
 
@@ -37,15 +37,15 @@ class TestBuilder(unittest.TestCase):
             def build(self, client):
                 self.build_order.append(self.image)
         images = {}
-        for i in xrange(11):
+        for i in range(11):
             images['image%d' % i] = ImageBuilder('image%d' % i, ['image%d' % (i-1) if i > 0 else 'alpine'])
         builder = tested_module.Builder()
-        for key, val in images.iteritems():
+        for key, val in six.iteritems(images):
             builder.images[key] = val
         client = object()
         builder.build(client, 'image10')
         ImageBuilder.build_order.should.be.eql([
-            'image%d' % i for i in xrange(11)
+            'image%d' % i for i in range(11)
         ])
 
         # introduce a dependency loop

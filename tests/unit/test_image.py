@@ -1,10 +1,10 @@
 import dynker.image as tested_module
 import docker.errors
+import json
+import six
 import unittest
 import tarfile
-import json
 
-from cStringIO import StringIO
 from .. import mock
 
 class TestImage(unittest.TestCase):
@@ -12,11 +12,11 @@ class TestImage(unittest.TestCase):
 
     def test_listensteam(self):
         image = tested_module.ImageBuilder('dynker', 'tests/fixtures/docker/test')
-        fd = StringIO()
-        image.listenStream(fd=fd, stream=map(json.dumps,[
+        fd = six.StringIO()
+        image.listenStream(fd=fd, stream=list(map(json.dumps,[
             {'stream': 'streamed-value\n'},
             {'status': 'done'},
-        ])+[
+        ]))+[
             "some non-json line",
         ])
         fd.getvalue().should.eql(
@@ -68,7 +68,7 @@ class TestImage(unittest.TestCase):
             json.dumps({'stream': 'build done\033[K\n'}),
         ]
         image.build(client)
-        client.build.mock_calls.should.be.eql([
+        list(client.build.mock_calls).should.be.eql([
             mock.call(
                 fileobj=image.getContext(),
                 custom_context=True,
@@ -89,7 +89,7 @@ class TestImage(unittest.TestCase):
 
     def test_build_context(self):
         image = tested_module.ImageBuilder('dynker', '.', dockerfile='docker/dynker/Dockerfile', expandDirectory=True)
-        context = StringIO(image.getContext())
+        context = six.BytesIO(image.getContext())
         tar = tarfile.open(fileobj=context, mode='r|gz')
         # just check if the Dockerfile has been created.
         tar.getmember('Dockerfile')
@@ -134,7 +134,7 @@ class TestImage(unittest.TestCase):
                             "file1": "some/path/file1",
                             "file2": "some/path/file2",
                         })
-                        filemap.assert_called_once()
+                        filemap.call_count.should.be.eql(1)
                         directory.assert_not_called()
                         symlink.assert_not_called()
 
@@ -147,9 +147,9 @@ class TestImage(unittest.TestCase):
                             "file1": "some/path/file1",
                             "file2": "some/path/file2",
                         })
-                        filemap.assert_called_once()
+                        filemap.call_count.should.be.eql(1)
                         directory.assert_not_called()
-                        symlink.assert_called_once()
+                        symlink.call_count.should.be.eql(1)
 
                         filemap.reset_mock()
                         directory.reset_mock()
@@ -160,8 +160,8 @@ class TestImage(unittest.TestCase):
                             "file1": "some/path/file1",
                             "file2": "some/path/file2",
                         })
-                        filemap.assert_called_once()
-                        directory.assert_called_once()
+                        filemap.call_count.should.be.eql(1)
+                        directory.call_count.should.be.eql(1)
                         symlink.assert_not_called()
 
                         filemap.reset_mock()
@@ -173,6 +173,6 @@ class TestImage(unittest.TestCase):
                             "file1": "some/path/file1",
                             "file2": "some/path/file2",
                         })
-                        filemap.assert_called_once()
-                        directory.assert_called_once()
-                        symlink.assert_called_once()
+                        filemap.call_count.should.be.eql(1)
+                        directory.call_count.should.be.eql(1)
+                        symlink.call_count.should.be.eql(1)

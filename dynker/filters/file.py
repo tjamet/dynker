@@ -1,9 +1,9 @@
-import sys
-import os
 import glob
 import logging
+import os
+import six
+import sys
 
-from cStringIO import StringIO
 from . import Filter
 
 class FileMapFilter(Filter) :

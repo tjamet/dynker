@@ -1,7 +1,9 @@
+import itertools
 import logging
 import re
+import six
+
 from .base import Filter
-import itertools
 
 class LineFilter(Filter):
 
@@ -11,15 +13,16 @@ class LineFilter(Filter):
         yield line
 
   def filter(self,input, restore_type=False) :
-    tpe = type(input)
-    if isinstance(input, (str,unicode)) :
-      input = input.splitlines(False)
-    it = iter(input)
+    if isinstance(input, six.string_types) :
+      lines = input.splitlines(False)
+    else:
+      lines = input
+    it = iter(lines)
     for f in self :
       it = f.filter(it)
     it = self.remove_nones(it)
-    if restore_type and tpe in (str,unicode) :
-      return tpe("\n").join(it)
+    if restore_type and isinstance(input, six.string_types) :
+      return type(input)("\n").join(it)
     return it
 
 class PatternMatch(object) :
@@ -33,12 +36,20 @@ class PatternMatch(object) :
 class MatchingLineFilter(PatternMatch, LineFilter) :
 
   def filter(self, it) :
-    return itertools.ifilter(lambda x : bool(self.patternRe.match(x)),it)
+    if six.PY3:
+      f = filter
+    else:
+      f = itertools.ifilter
+    return f(lambda x : bool(self.patternRe.match(x)),it)
 
 class NotMatchingLineFilter(PatternMatch, LineFilter) :
 
   def filter(self, it) :
-    return itertools.ifilterfalse(lambda x : bool(self.patternRe.match(x)),it)
+    if six.PY3:
+      f = itertools.filterfalse
+    else:
+      f = itertools.ifilterfalse
+    return f(lambda x : bool(self.patternRe.match(x)),it)
 
 class ReplaceLineReFilter(PatternMatch, LineFilter) :
 
@@ -49,11 +60,19 @@ class ReplaceLineReFilter(PatternMatch, LineFilter) :
     self.count = count
 
   def filter(self,it) :
-    return itertools.imap(lambda x : self.patternRe.sub(self.sub, x, self.count),it)
+    if six.PY3:
+      f = map
+    else:
+      f = itertools.imap
+    return f(lambda x : self.patternRe.sub(self.sub, x, self.count),it)
 
 class StripLinesFilter(LineFilter) :
     def __init__(self,prio=0) :
         self.prio = prio
         self.logger = logging.getLogger(self.__class__.__name__)
     def filter(self, it) :
-        return itertools.imap(lambda x : x.strip(), it)
+        if six.PY3:
+          f = map
+        else:
+          f = itertools.imap
+        return f(lambda x : x.strip(), it)

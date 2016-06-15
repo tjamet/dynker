@@ -1,5 +1,6 @@
 import dynker.dockerfile as tested_module
 import sure
+import six
 import sys
 import unittest
 import tempfile
@@ -13,7 +14,7 @@ class tempDockerfile(object):
     def __enter__(self):
         fd = tempfile.NamedTemporaryFile()
         self.fd = fd
-        fd.write('\n'.join(self.content))
+        fd.write(six.b('\n'.join(self.content)))
         fd.seek(0)
         return fd
 

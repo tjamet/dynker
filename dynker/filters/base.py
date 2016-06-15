@@ -1,6 +1,27 @@
-__all__ = ["Filter", "ChainFilter"]
 import itertools
 import logging
+import six
+__all__ = ["Filter", "ChainFilter"]
+
+
+def cmp_to_key(mycmp):
+    'Convert a cmp= function into a key= function'
+    class K(object):
+        def __init__(self, obj, *args):
+            self.obj = obj
+        def __lt__(self, other):
+            return mycmp(self.obj, other.obj) < 0
+        def __gt__(self, other):
+            return mycmp(self.obj, other.obj) > 0
+        def __eq__(self, other):
+            return mycmp(self.obj, other.obj) == 0
+        def __le__(self, other):
+            return mycmp(self.obj, other.obj) <= 0
+        def __ge__(self, other):
+            return mycmp(self.obj, other.obj) >= 0
+        def __ne__(self, other):
+            return mycmp(self.obj, other.obj) != 0
+    return K
 
 class Filter(object) :
   Prio = 0
@@ -8,7 +29,7 @@ class Filter(object) :
   AutoFilter=True
 
   def _getObjPrio(self,obj) :
-    if isinstance(obj,(int,long, float)) :
+    if isinstance(obj, six.integer_types) or isinstance(obj, float):
       return obj
     try :
         return obj.prio
@@ -18,7 +39,11 @@ class Filter(object) :
   def iterFilters(self, withTemplates=False, sort=False) :
     if sort :
       # b, a: reverse order, larger prio first
-      for f in sorted(self.iterFilters(withTemplates, False), cmp=lambda b,a:cmp(self._getObjPrio(a),self._getObjPrio(b))) :
+      for f in sorted(
+        self.iterFilters(withTemplates, False),
+        key=lambda x:self._getObjPrio(x),
+        reverse=True
+      ) :
         yield f
     else :
         for f in self.filters :

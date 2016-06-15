@@ -1,18 +1,18 @@
-import sys
-import os
-import glob
-import logging
 import docker
 import hashlib
-import yaml
-import tarfile
+import glob
 import json
+import logging
+import os
+import six
+import sys
+import tarfile
 import tempfile
 import termcolor
+import yaml
 
 from copy import copy
-from cStringIO import StringIO
-from filters.file import ResolveSymLink, ExpandDirectoryFilter, FileMapFilter, ExpandFileMapFilter
+from .filters.file import ResolveSymLink, ExpandDirectoryFilter, FileMapFilter, ExpandFileMapFilter
 from .dockerfile import Dockerfile
 
 class ImageBuilder(object) :
@@ -42,15 +42,14 @@ class ImageBuilder(object) :
         return dict(fileListFilter.filter(iterContext()))
 
     def getContext(self):
-        gzip = StringIO()
+        gzip = six.BytesIO()
         tar = tarfile.open(fileobj=gzip,mode="w|gz")
         mapping = self.expandContextMap()
-        for dest, src in mapping.iteritems() :
+        for dest, src in six.iteritems(mapping) :
             tar.add(src, dest)
-        dockerfile = tempfile.TemporaryFile()
+        dockerfile = tempfile.NamedTemporaryFile(mode="w")
         dockerfile.write(str(self.getDockerfile(mapping)))
-        dockerfile.seek(0)
-        tar.addfile(tar.gettarinfo(arcname="Dockerfile", fileobj=dockerfile), fileobj=dockerfile)
+        tar.addfile(tar.gettarinfo(arcname="Dockerfile", fileobj=open(dockerfile.name, 'r')), fileobj=dockerfile)
         dockerfile.close()
         tar.close()
         return gzip.getvalue()
@@ -66,12 +65,12 @@ class ImageBuilder(object) :
 
     def buildTag(self) :
         h = hashlib.sha1()
-        h.update(str(self.getDockerfile()))
+        h.update(str(self.getDockerfile()).encode('utf-8'))
         mapping = self.expandContextMap()
-        for destination, source in mapping.iteritems():
-            h.update(destination)
-            h.update(str(os.stat(source).st_mode))
-            h.update(file(source).read())
+        for destination, source in six.iteritems(mapping):
+            h.update(destination.encode('utf-8'))
+            h.update(str(os.stat(source).st_mode).encode('utf-8'))
+            h.update(open(source).read().encode('utf-8'))
         return h.hexdigest()
     def build(self, client, out_fd=sys.stdout) :
         tag = self.buildTag()

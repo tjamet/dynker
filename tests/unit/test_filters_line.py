@@ -1,12 +1,13 @@
 import unittest
 import sure
+import six
 import dynker.filters.line
 
 def factoryFilter(c, *args, **kwds):
     class TestFilter(c):
         def filter(self, *args, **kwds):
             r = c.filter(self, *args, **kwds)
-            if isinstance(r, (str, unicode)):
+            if isinstance(r, six.string_types):
                 return r
             if isinstance(r, (list, tuple)):
                 return r

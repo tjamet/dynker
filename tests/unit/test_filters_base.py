@@ -22,7 +22,6 @@ class TestFilter(unittest.TestCase):
         for prio in [
             self.faker.pyint(),
             self.faker.pyfloat(),
-            long(self.faker.pyint()),
         ]:
             filter._getObjPrio.when.called_with(prio).should.return_value(prio)
         filter._getObjPrio.when.called_with(obj).should.return_value(float('-inf'))
@@ -37,7 +36,7 @@ class TestFilter(unittest.TestCase):
           pass
         other = Other()
         self.assertEqual(MyFilter()._getObjPrio(other),float("-inf"))
-        for p in 10, long(199), float(100) :
+        for p in 10, float(100) :
             other.Prio = p
             self.assertEqual(MyFilter()._getObjPrio(other),p)
         a = MyFilter()
