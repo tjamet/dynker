@@ -63,7 +63,8 @@ class TestBuilder(unittest.TestCase):
         )
         # Any other setting is tested more globally with test_get_image
 
-    def test_default_config(self):
+    @mock.patch('os.path.exists', return_value=False)
+    def test_default_config(self, exists):
         builder = tested_module.Builder()
         builder.config.get('images').should.be.eql([
             {'path': 'docker/*'}
