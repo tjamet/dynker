@@ -1,5 +1,5 @@
 import sys
-from filters import *
+import dynker.filters
 import logging
 
 class Dockerfile(object) :
@@ -13,10 +13,10 @@ class Dockerfile(object) :
         self.newTag = newTag
     @property
     def filter(self) :
-        return DockerfileFilter(optimizeLayers=self.optimizeLayers, keepFirstFrom=self.single, tagResolver=self.tagResolver)
+        return dynker.filters.DockerfileFilter(optimizeLayers=self.optimizeLayers, keepFirstFrom=self.single, tagResolver=self.tagResolver)
     @property
     def depsFilter(self) :
-        return DockerfileDepExtractor(optimizeLayers=self.optimizeLayers, keepFirstFrom=self.single)
+        return dynker.filters.DockerfileDepExtractor(optimizeLayers=self.optimizeLayers, keepFirstFrom=self.single)
     def imageTag(self, imgName) :
         return self.newTag
     def lines(self) :
@@ -32,7 +32,7 @@ class Dockerfile(object) :
     def listBuildFiles(self):
         '''Returns the list of files and glob pattern to be added in the build context
         '''
-        return list(DockerfileAddExtractor().filter(self.lines()))
+        return list(dynker.filters.DockerfileAddExtractor().filter(self.lines()))
 
 def addDockerfileOptions(parser) :
     parser.add_argument("-s", "--single", dest="single", action="store_true",
