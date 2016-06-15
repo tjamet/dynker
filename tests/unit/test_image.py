@@ -55,6 +55,7 @@ class TestImage(unittest.TestCase):
 
         image.build(client)
         client.build.assert_not_called()
+        client.build.reset_mock()
 
         def inspect_image(*args, **kwds):
             raise docker.errors.NotFound("message", "response", "explanation")
@@ -94,7 +95,9 @@ class TestImage(unittest.TestCase):
         # just check if the Dockerfile has been created.
         tar.getmember('Dockerfile')
 
-    def test_buildtag(self):
+    @mock.patch('os.stat')
+    def test_buildtag(self, stat):
+        stat.return_value = mock.Mock(st_mode=33188)
         image = tested_module.ImageBuilder('dynker', 'tests/fixtures/docker/test')
         image.buildTag().should.be.eql('22166d05673626d4eb4de3e305d32142c860ee8c')
 
