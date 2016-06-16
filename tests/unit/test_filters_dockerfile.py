@@ -37,16 +37,16 @@ class TestDockerfile(unittest.TestCase):
     def test_multiline_contatenation(self):
         filter = filterFactory(tested_module.DockerileMultipleLine)
         filter.filter.when.called_with([
-            r'first line \\',
-            r'second line',
+            'first line \\',
+            'second line',
         ]).should.return_value([
             'first line second line',
         ])
 
         filter.filter.when.called_with([
-            r'first line \\',
+            'first line \\',
         ]).should.return_value([
-            r'first line \\',
+            'first line \\',
         ])
 
     def test_yum_cache_clean(self):
@@ -244,16 +244,16 @@ class TestDockerfile(unittest.TestCase):
     def test_dockerfile(self):
         filter = filterFactory(tested_module.DockerfileFilter)
         filter.filter.when.called_with([
-            r'FROM an/image',
-            r'# a comment describing the image',
-            r'  # yet another badly indented comment',
-            r'RUN something # to explain why',
-            r'  RUN something.else    ',
-            r'RUN something\\',
-            r'    on 2 lines',
-            r'   ',
-            r'',
-            r'ADD some file'
+            'FROM an/image',
+            '# a comment describing the image',
+            '  # yet another badly indented comment',
+            'RUN something # to explain why',
+            '  RUN something.else    ',
+            'RUN something\\',
+            '    on 2 lines',
+            '   ',
+            '',
+            'ADD some file'
         ]).should.return_value([
             'FROM an/image',
             'RUN something',
@@ -264,16 +264,16 @@ class TestDockerfile(unittest.TestCase):
 
         filter = filterFactory(tested_module.DockerfileFilter, optimizeLayers=True)
         filter.filter.when.called_with([
-            r'FROM an/image',
-            r'# a comment describing the image',
-            r'  # yet another badly indented comment',
-            r'RUN something # to explain why',
-            r'  RUN something.else    ',
-            r'RUN something\\',
-            r'    on 2 lines',
-            r'   ',
-            r'',
-            r'ADD some file'
+            'FROM an/image',
+            '# a comment describing the image',
+            '  # yet another badly indented comment',
+            'RUN something # to explain why',
+            '  RUN something.else    ',
+            'RUN something\\',
+            '    on 2 lines',
+            '   ',
+            '',
+            'ADD some file'
         ]).should.return_value([
             'FROM an/image',
             'RUN something && something.else && something    on 2 lines',

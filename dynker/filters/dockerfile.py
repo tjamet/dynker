@@ -39,14 +39,14 @@ class DockerileMultipleLine(LineFilter):
     def filter(self, it):
         curLine = ""
         for line in it:
-            if line.endswith(r'\\'):
-                curLine += line[:-2]
+            if line.endswith('\\'):
+                curLine += line[:-1]
             else:
                 curLine += line
                 yield curLine
                 curLine = ""
         if curLine:
-            yield curLine + r'\\'
+            yield curLine + '\\'
 
 class DockerfileOptYum(PatternMatch, LineFilter) :
     Prio = -20
