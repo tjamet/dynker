@@ -47,14 +47,15 @@ class ImageBuilder(object) :
         mapping = self.expandContextMap()
         for dest, src in six.iteritems(mapping) :
             tar.add(src, dest)
-        dockerfile = tempfile.NamedTemporaryFile(mode="w")
-        dockerfile.write(str(self.getDockerfile(mapping)))
-        tar.addfile(tar.gettarinfo(arcname="Dockerfile", fileobj=open(dockerfile.name, 'r')), fileobj=dockerfile)
+        dockerfile = tempfile.NamedTemporaryFile()
+        self.getDockerfile().write(dockerfile)
+        dockerfile.seek(0)
+        tar.addfile(tar.gettarinfo(arcname="Dockerfile", fileobj=dockerfile), fileobj=dockerfile)
         dockerfile.close()
         tar.close()
         return gzip.getvalue()
 
-    def getDockerfile(self, mapping=None) :
+    def getDockerfile(self) :
         return Dockerfile(self.dockerfile, **self.dockerfileKwds)
 
     def deps(self) :
@@ -73,7 +74,7 @@ class ImageBuilder(object) :
             # and set uid bits. The others are less useful
             permissions = int(os.stat(source).st_mode & 0o6777)
             h.update(repr(permissions).encode('utf-8'))
-            h.update(open(source).read().encode('utf-8'))
+            h.update(open(source, 'rb').read())
         return h.hexdigest()
     def build(self, client, out_fd=sys.stdout) :
         tag = self.buildTag()
@@ -101,7 +102,7 @@ class ImageBuilder(object) :
         head = termcolor.colored('[{name}]:', 'cyan').format(name=self.name)
         for l in  stream:
             try :
-                l = json.loads(l)
+                l = json.loads(str(l))
                 if "status" in l :
                     line = '%s\n' % l["status"]
                 else :

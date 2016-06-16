@@ -22,10 +22,14 @@ class Dockerfile(object) :
         return self.newTag
     def lines(self) :
         for path in self.paths :
-            for line in open(path) :
+            for line in open(path, 'r') :
                 yield line
     def __str__(self) :
         return "\n".join(self.filter.filter(self.lines()))
+    def write(self, fd):
+        for line in self.filter.filter(self.lines()):
+            fd.write(six.b(line))
+            fd.write(six.b('\n'))
     def deps(self) :
         return self.paths + self.listBuildFiles()
     def imageDeps(self) :
