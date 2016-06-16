@@ -90,14 +90,16 @@ class ImageBuilder(object) :
         if not isinstance(tags, (list, tuple)):
             tags = [tags]
         buildTag = self.buildTag()
+        tags = [buildTag] + tags
         for registry in [None]+registries:
             for tag in tags:
                 image_name = self.name
                 if registry:
                     image_name = '%s/%s' % (registry, image_name)
-                self.logger.info('tagging image %s:%s to %s:%s', self.name, buildTag, image_name, tag)
-                if not client.tag('%s:%s' % (self.name, buildTag), image_name, tag, force=force):
-                    raise RuntimeError("Failed to tag image %s" % image_name)
+                if self.name!=image_name or buildTag !=tag:
+                    self.logger.info('tagging image %s:%s to %s:%s', self.name, buildTag, image_name, tag)
+                    if not client.tag('%s:%s' % (self.name, buildTag), image_name, tag, force=force):
+                        raise RuntimeError("Failed to tag image %s" % image_name)
     def listenStream(self,stream, fd=sys.stdout) :
         head = termcolor.colored('[{name}]:', 'cyan').format(name=self.name)
         for l in  stream:

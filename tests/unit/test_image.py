@@ -37,12 +37,13 @@ class TestImage(unittest.TestCase):
         client = mock.Mock()
         client.tag = mock.Mock(return_value=1)
         image.tag(client, ['latest', 'dev'], registries=['docker.my-company.com'])
-        client.tag.call_count.should.eql(4)
+        client.tag.call_count.should.eql(5)
         for call in [
             mock.call(mock.ANY, 'dynker', 'latest', force=True),
             mock.call(mock.ANY, 'dynker', 'dev', force=True),
             mock.call(mock.ANY, 'docker.my-company.com/dynker', 'latest', force=True),
-            mock.call(mock.ANY, 'docker.my-company.com/dynker', 'dev', force=True)
+            mock.call(mock.ANY, 'docker.my-company.com/dynker', 'dev', force=True),
+            mock.call(mock.ANY, 'docker.my-company.com/dynker', image.buildTag(), force=True),
         ]:
             client.tag.mock_calls.should.contain(call)
 

@@ -18,7 +18,7 @@ class TestBuilder(unittest.TestCase):
         command = ['build', 'layer10', '-v', '--registry', 'docker.my-company.com']
         tested_module.main(command)
         cl.inspect_image.call_count.should.eql(12)
-        cl.tag.call_count.should.eql(2)
+        cl.tag.call_count.should.eql(3)
         cl.tag.mock_calls.should.contain(
             mock.call(mock.ANY, 'layer10', 'latest', force=True)
         )
