@@ -148,7 +148,7 @@ class TestImage(unittest.TestCase):
                             side_effect=lambda x: x) as symlink:
 
                         image = tested_module.ImageBuilder('test-image', 'some/path')
-                        image.expandContextMap.when.called_with().should.return_value({
+                        dict(image.expandContextMap()).should.be.eql({
                             "file1": "some/path/file1",
                             "file2": "some/path/file2",
                         })
@@ -161,7 +161,7 @@ class TestImage(unittest.TestCase):
                         symlink.reset_mock()
 
                         image = tested_module.ImageBuilder('test-image', 'some/path', followSymLinks=True)
-                        image.expandContextMap.when.called_with().should.return_value({
+                        dict(image.expandContextMap()).should.be.eql({
                             "file1": "some/path/file1",
                             "file2": "some/path/file2",
                         })
@@ -174,7 +174,7 @@ class TestImage(unittest.TestCase):
                         symlink.reset_mock()
 
                         image = tested_module.ImageBuilder('test-image', 'some/path', expandDirectory=True)
-                        image.expandContextMap.when.called_with().should.return_value({
+                        dict(image.expandContextMap()).should.be.eql({
                             "file1": "some/path/file1",
                             "file2": "some/path/file2",
                         })
@@ -187,7 +187,7 @@ class TestImage(unittest.TestCase):
                         symlink.reset_mock()
 
                         image = tested_module.ImageBuilder('test-image', 'some/path', followSymLinks=True, expandDirectory=True)
-                        image.expandContextMap.when.called_with().should.return_value({
+                        dict(image.expandContextMap()).should.be.eql({
                             "file1": "some/path/file1",
                             "file2": "some/path/file2",
                         })

@@ -1,3 +1,4 @@
+import collections
 import docker
 import hashlib
 import glob
@@ -38,7 +39,7 @@ class ImageBuilder(object) :
             for arcPattern in self.getDockerfile().listBuildFiles() :
                 repoPattern = os.path.join(self.contextPath,arcPattern)
                 yield arcPattern, repoPattern
-        return dict(fileListFilter.filter(iterContext()))
+        return collections.OrderedDict(fileListFilter.filter(iterContext()))
 
     def getContext(self):
         gzip = six.BytesIO()
