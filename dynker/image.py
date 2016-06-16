@@ -31,8 +31,7 @@ class ImageBuilder(object) :
         fileListFilter = FileMapFilter()
         self.logger.debug("getting content")
         fileListFilter.withFilter(ExpandFileMapFilter())
-        if self.expandDirectory :
-            fileListFilter.withFilter(ExpandDirectoryFilter())
+        fileListFilter.withFilter(ExpandDirectoryFilter())
         if self.followSymLinks :
             fileListFilter.withFilter(ResolveSymLink())
         def iterContext():
@@ -69,7 +68,10 @@ class ImageBuilder(object) :
         mapping = self.expandContextMap()
         for destination, source in six.iteritems(mapping):
             h.update(destination.encode('utf-8'))
-            h.update(str(os.stat(source).st_mode).encode('utf-8'))
+            # the important bits are permissions
+            # and set uid bits. The others are less useful
+            permissions = int(os.stat(source).st_mode & 0o6777)
+            h.update(repr(permissions).encode('utf-8'))
             h.update(open(source).read().encode('utf-8'))
         return h.hexdigest()
     def build(self, client, out_fd=sys.stdout) :

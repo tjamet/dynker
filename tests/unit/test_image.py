@@ -1,6 +1,7 @@
 import dynker.image as tested_module
 import docker.errors
 import json
+import os
 import six
 import unittest
 import tarfile
@@ -95,11 +96,25 @@ class TestImage(unittest.TestCase):
         # just check if the Dockerfile has been created.
         tar.getmember('Dockerfile')
 
-    @mock.patch('os.stat')
-    def test_buildtag(self, stat):
-        stat.return_value = mock.Mock(st_mode=33188)
-        image = tested_module.ImageBuilder('dynker', 'tests/fixtures/docker/test')
-        image.buildTag().should.be.eql('22166d05673626d4eb4de3e305d32142c860ee8c')
+    def test_buildtag(self):
+        original_stat = os.stat
+        with mock.patch('os.stat') as stat:
+            def _stat(path):
+                r = original_stat(path)
+                def iter_stat(r):
+                    for attr in dir(r):
+                        if attr.startswith('st_'):
+                            yield attr, getattr(r,attr)
+                kwds = dict(iter_stat(r))
+                # freeze user permissions
+                # even if the developer gave extra permissions
+                # on the folders, pretend he didn't to ensure the
+                # sha1 test to pass
+                kwds['st_mode'] &= ~0o7777
+                return mock.Mock(**kwds)
+            stat.side_effect = _stat
+            image = tested_module.ImageBuilder('dynker', 'tests/fixtures/docker/test')
+            image.buildTag().should.be.eql('927c634d55087e483f4965ec76b0c5259493240e')
 
     def test_image_deps(self):
         with mock.patch.object(tested_module.Dockerfile,
@@ -138,7 +153,7 @@ class TestImage(unittest.TestCase):
                             "file2": "some/path/file2",
                         })
                         filemap.call_count.should.be.eql(1)
-                        directory.assert_not_called()
+                        directory.call_count.should.be.eql(1)
                         symlink.assert_not_called()
 
                         filemap.reset_mock()
@@ -151,7 +166,7 @@ class TestImage(unittest.TestCase):
                             "file2": "some/path/file2",
                         })
                         filemap.call_count.should.be.eql(1)
-                        directory.assert_not_called()
+                        directory.call_count.should.be.eql(1)
                         symlink.call_count.should.be.eql(1)
 
                         filemap.reset_mock()
