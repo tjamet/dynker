@@ -32,6 +32,11 @@ class TestDockerfile(unittest.TestCase):
         'RUN  something',
     ]
 
+    def test_lines(self):
+        with tempDockerfile(self.content) as fd:
+            dockerfile = tested_module.Dockerfile(fd.name)
+            list(dockerfile.lines()).should.eql(self.content)
+
     def test_deps(self):
         with tempDockerfile(self.content) as fd:
             dockerfile = tested_module.Dockerfile(fd.name)

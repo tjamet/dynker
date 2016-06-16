@@ -23,7 +23,7 @@ class Dockerfile(object) :
     def lines(self) :
         for path in self.paths :
             for line in open(path, 'r') :
-                yield line
+                yield line.rstrip('\n\r')
     def __str__(self) :
         return "\n".join(self.filter.filter(self.lines()))
     def write(self, fd):
